@@ -9,6 +9,8 @@ import com.scaledaction.core.config.KafkaConfig
 import com.datastax.killrweather.Weather.RawWeatherData
 //import kafka.server.KafkaConfig
 //import domain.Tweet
+import spray.httpx.SprayJsonSupport._
+import spray.json.DefaultJsonProtocol
 
 class KafkaProducerActor extends Actor with KafkaConfig {
   //TODO - set up a logging trait like spark has
@@ -33,10 +35,10 @@ class KafkaProducerActor extends Actor with KafkaConfig {
   def receive: Receive = {
     //case msg => println(s"producer received ${msg}")
     //case tweet: Tweet =>
-    case weatherData: RawWeatherData =>
+    case weatherData: RawWeatherData => 
       //val record = new ProducerRecord[String,String](KafkaTopic, tweet.json)
       val record = new ProducerRecord[String, String]("", "")
-      println(s"KafkaTopic: ${KafkaTopic}, weatherData: ${weatherData}")
+      println(s"KafkaTopic: ${KafkaTopic}, weatherData: ${weatherData.toJson}")
     //          producer.send(record, new Callback {
     //            override def onCompletion(result: RecordMetadata, exception: Exception) {
     //              if (exception != null) {
