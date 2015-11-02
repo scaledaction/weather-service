@@ -3,13 +3,13 @@
   "cmd": "java -cp weatherservice-ingest-api-assembly-1.0.jar com.scaledaction.weatherservice.ingest.api.DataIngestApiApp",
   "env":{
     "HTTP_HOST":"demo.marathon.mesos",
-    "HTTP_PORT":"8080"
+    "HTTP_PORT":"8081",
     "KAFKA_BROKERS":"broker-0.kafka.mesos:1025,broker-1.kafka.mesos:1025,broker-2.kafka.mesos:1025",
   },
   "instances": 1,
   "cpus": 1.0,
   "mem": 1024,
   "uris": ["https://s3.amazonaws.com/scaledactionben/lib/weatherservice-ingest-api-assembly-1.0.jar"],
-  "ports": [8080]
+  "ports": [8081]
 }
 

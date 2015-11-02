@@ -1,0 +1,14 @@
+{
+  "id": "client-service",
+  "cmd": "java -cp weatherservice-client-service-assembly-1.0.jar com.scaledaction.weatherservice.client.service.ClientServiceApp",
+  "env":{
+    "HTTP_HOST":"demo.marathon.mesos",
+    "HTTP_PORT":"8080"
+  },
+  "instances": 1,
+  "cpus": 1.0,
+  "mem": 1024,
+  "uris": ["https://s3.amazonaws.com/scaledactionben/lib/weatherservice-client-service-assembly-1.0.jar"],
+  "ports": [8080]
+}
+
