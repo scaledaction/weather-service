@@ -20,11 +20,11 @@ class DataIngestApiSpec extends Specification with Specs2RouteTest with HttpServ
 
   "DataIngestApi" should {
 
-    "return a greeting for GET requests to the root path" in {
-      Get() ~> route ~> check {
-        responseAs[String] must contain("Weather Service Data Ingest API")
-      }
-    }
+//    "return a greeting for GET requests to the root path" in {
+//      Get() ~> route ~> check {
+//        responseAs[String] must contain("Weather Service Data Ingest API")
+//      }
+//    }
 
     "leave GET requests to other paths unhandled" in {
       Get("/kermit") ~> route ~> check {
@@ -35,7 +35,7 @@ class DataIngestApiSpec extends Specification with Specs2RouteTest with HttpServ
     "return a MethodNotAllowed error for PUT requests to the root path" in {
       Put() ~> sealRoute(route) ~> check {
         status === MethodNotAllowed
-        responseAs[String] === "HTTP method not allowed, supported methods: GET"
+        responseAs[String] === "HTTP method not allowed, supported methods: POST"
       }
     }
   }

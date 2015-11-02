@@ -44,8 +44,8 @@ lazy val coreDeps = Seq(
   //"org.apache.spark"       %% "spark-sql"             % sparkVersion, //% "provided",
   "org.specs2"             %% "specs2"                % "2.2.2"        % "test",
   "io.spray"               %% "spray-testkit"         % sprayVersion   % "test",
-  "com.typesafe.akka"      %% "akka-testkit"          % akkaVersion    % "test"
-  //"org.apache.kafka" % "kafka_2.10" % kafkaVersion
+  "com.typesafe.akka"      %% "akka-testkit"          % akkaVersion    % "test",
+  "org.apache.kafka"       % "kafka_2.10"             % kafkaVersion
   //  exclude("javax.jms", "jms")
   //  exclude("com.sun.jdmk", "jmxtools")
   //  exclude("com.sun.jmx", "jmxri")

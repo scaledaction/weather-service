@@ -15,10 +15,9 @@
  */
 package com.scaledaction.core.akka
 
-import java.net.InetAddress
 import scala.util.Try
-import com.typesafe.config.{ Config, ConfigFactory }
-import com.scaledaction.core.config.AppConfig
+import com.typesafe.config.Config
+import com.scaledaction.core.config.{ AppConfig, HasAppConfig }
 
 /**
  * Application settings. First attempts to acquire from the deploy environment.
@@ -41,130 +40,27 @@ import com.scaledaction.core.config.AppConfig
  *
  * @param conf Optional config for test
  */
-//final class AppConfig(conf: Option[Config] = None) extends Serializable {
-trait HttpServerConfig extends AppConfig {
+class HttpServerConfig(
+  val host: String,
+  val port: Int,
+  rootConfig: Config) extends AppConfig(rootConfig: Config) {
 
-  protected val http = rootConfig.getConfig("http")
-  //protected val spark = rootConfig.getConfig("spark")
-  //  protected val cassandra = rootConfig.getConfig("cassandra")
-  //  protected val kafka = ConfigFactory.load.getConfig("kafka")
-  //  protected val killrweather = rootConfig.getConfig("killrweather")
+  override def toString(): String = s"host: ${host}, port: ${port}"
+}
 
-  val HttpHost = withFallback[String](Try(http.getString("host")),
-    "http.host") getOrElse "localhost"
+trait HasHttpServerConfig extends HasAppConfig {
 
-  //      val HttpHost = withFallback[String](http.getString("host"),
-  //    "HTTP_HOST")
+  def getHttpServerConfig: HttpServerConfig = getHttpServerConfig(rootConfig.getConfig("http"))
 
-  val HttpPort = withFallback[Int](Try(http.getInt("port")),
-    "http.port") getOrElse 8080
+  def getHttpServerConfig(rootName: String): HttpServerConfig = getHttpServerConfig(rootConfig.getConfig(rootName))
 
-  //  val SparkMaster = withFallback[String](Try(spark.getString("master")),
-  //    "spark.master") getOrElse "local[*]"
-  //
-  //  val SparkCleanerTtl = withFallback[Int](Try(spark.getInt("cleaner.ttl")),
-  //    "spark.cleaner.ttl") getOrElse (3600*2)
-  //
-  //  val SparkStreamingBatchInterval = withFallback[Int](Try(spark.getInt("streaming.batch.interval")),
-  //    "spark.streaming.batch.interval") getOrElse 1000
+  private def getHttpServerConfig(http: Config): HttpServerConfig = {
+    val host = withFallback[String](Try(http.getString("host")),
+      "http.host") getOrElse "localhost"
 
-  //  val SparkCheckpointDir = killrweather.getString("spark.checkpoint.dir")
-  //
-  //  val CassandraHosts = withFallback[String](Try(cassandra.getString("connection.host")),
-  //    "spark.cassandra.connection.host") getOrElse localAddress
-  //
-  //  val CassandraAuthUsername: Option[String] = Try(cassandra.getString("auth.username")).toOption
-  //    .orElse(sys.props.get("spark.cassandra.auth.username"))
-  //
-  //  val CassandraAuthPassword: Option[String] = Try(cassandra.getString("auth.password")).toOption
-  //    .orElse(sys.props.get("spark.cassandra.auth.password"))
-  //
-  //  val CassandraAuth: AuthConf = {
-  //    val credentials = for (
-  //      username <- CassandraAuthUsername;
-  //      password <- CassandraAuthPassword
-  //    ) yield (username, password)
-  //
-  //    credentials match {
-  //      case Some((user, password)) => PasswordAuthConf(user, password)
-  //      case None                   => NoAuthConf
-  //    }
-  //  }
-  //
-  //  val CassandraRpcPort = withFallback[Int](Try(cassandra.getInt("connection.rpc.port")),
-  //    "spark.cassandra.connection.rpc.port") getOrElse 9160
-  //
-  //  val CassandraNativePort = withFallback[Int](Try(cassandra.getInt("connection.native.port")),
-  //    "spark.cassandra.connection.native.port") getOrElse 9042
-  //
-  //  /* Tuning */
-  //
-  //  val CassandraKeepAlive = withFallback[Int](Try(cassandra.getInt("connection.keep-alive")),
-  //    "spark.cassandra.connection.keep_alive_ms") getOrElse 1000
-  //
-  //  val CassandraRetryCount = withFallback[Int](Try(cassandra.getInt("connection.query.retry-count")),
-  //    "spark.cassandra.query.retry.count") getOrElse 10
-  //
-  //  val CassandraConnectionReconnectDelayMin = withFallback[Int](Try(cassandra.getInt("connection.reconnect-delay.min")),
-  //    "spark.cassandra.connection.reconnection_delay_ms.min") getOrElse 1000
-  //
-  //  val CassandraConnectionReconnectDelayMax = withFallback[Int](Try(cassandra.getInt("reconnect-delay.max")),
-  //    "spark.cassandra.connection.reconnection_delay_ms.max") getOrElse 60000
-  //
-  //  /* Reads */
-  //  val CassandraReadPageRowSize = withFallback[Int](Try(cassandra.getInt("read.page.row.size")),
-  //    "spark.cassandra.input.page.row.size") getOrElse 1000
-  //
-  //  val CassandraReadConsistencyLevel: ConsistencyLevel = ConsistencyLevel.valueOf(
-  //    withFallback[String](Try(cassandra.getString("read.consistency.level")),
-  //      "spark.cassandra.input.consistency.level") getOrElse ConsistencyLevel.LOCAL_ONE.name)
-  //
-  //  val CassandraReadSplitSize = withFallback[Long](Try(cassandra.getLong("read.split.size")),
-  //    "spark.cassandra.input.split.size") getOrElse 100000
-  //
-  //  /* Writes */
-  //
-  //  val CassandraWriteParallelismLevel = withFallback[Int](Try(cassandra.getInt("write.concurrent.writes")),
-  //    "spark.cassandra.output.concurrent.writes") getOrElse 5
-  //
-  //  val CassandraWriteBatchSizeBytes = withFallback[Int](Try(cassandra.getInt("write.batch.size.bytes")),
-  //    "spark.cassandra.output.batch.size.bytes") getOrElse 64 * 1024
-  //
-  //  private val CassandraWriteBatchSizeRows = withFallback[String](Try(cassandra.getString("write.batch.size.rows")),
-  //    "spark.cassandra.output.batch.size.rows") getOrElse "auto"
-  //
-  //  val CassandraWriteBatchRowSize: Option[Int] = {
-  //    val NumberPattern = "([0-9]+)".r
-  //    CassandraWriteBatchSizeRows match {
-  //      case "auto"           => None
-  //      case NumberPattern(x) => Some(x.toInt)
-  //      case other =>
-  //        throw new IllegalArgumentException(
-  //          s"Invalid value for 'cassandra.output.batch.size.rows': $other. Number or 'auto' expected")
-  //    }
-  //  }
-  //
-  //  val CassandraWriteConsistencyLevel: ConsistencyLevel = ConsistencyLevel.valueOf(
-  //    withFallback[String](Try(cassandra.getString("write.consistency.level")),
-  //      "spark.cassandra.output.consistency.level") getOrElse ConsistencyLevel.LOCAL_ONE.name)
-  //
-  //  val CassandraDefaultMeasuredInsertsCount: Int = 128
-  //
-  //  val KafkaGroupId = kafka.getString("group.id")
-  //  val KafkaTopicRaw = kafka.getString("topic.raw")
-  //  val KafkaEncoderFqcn = kafka.getString("encoder.fqcn")
-  //  val KafkaDecoderFqcn = kafka.getString("decoder.fqcn")
-  //  val KafkaPartitioner = kafka.getString("partitioner.fqcn")
-  //  val KafkaBatchSendSize = kafka.getInt("batch.send.size")
+    val port = withFallback[Int](Try(http.getInt("port")),
+      "http.port") getOrElse 8080
 
-  //  val AppName = killrweather.getString("app-name")
-  //  val CassandraKeyspace = killrweather.getString("cassandra.keyspace")
-  //  val CassandraTableRaw = killrweather.getString("cassandra.table.raw")
-  //  val CassandraTableDailyTemp = killrweather.getString("cassandra.table.daily.temperature")
-  //  val CassandraTableDailyPrecip = killrweather.getString("cassandra.table.daily.precipitation")
-  //  val CassandraTableCumulativePrecip = killrweather.getString("cassandra.table.cumulative.precipitation")
-  //  val CassandraTableSky = killrweather.getString("cassandra.table.sky")
-  //  val CassandraTableStations = killrweather.getString("cassandra.table.stations")
-  //  val DataLoadPath = killrweather.getString("data.load.path")
-  //  val DataFileExtension = killrweather.getString("data.file.extension")
+    new HttpServerConfig(host, port, http)
+  }
 }

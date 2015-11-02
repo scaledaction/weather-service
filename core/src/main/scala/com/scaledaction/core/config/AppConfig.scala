@@ -18,8 +18,6 @@ package com.scaledaction.core.config
 import java.net.InetAddress
 
 import scala.util.Try
-//import com.datastax.driver.core.ConsistencyLevel
-//import com.datastax.spark.connector.cql.{AuthConf, NoAuthConf, PasswordAuthConf}
 import com.typesafe.config.{ Config, ConfigFactory }
 
 /**
@@ -43,28 +41,33 @@ import com.typesafe.config.{ Config, ConfigFactory }
  *
  * @param conf Optional config for test
  */
+
+protected class AppConfig(rootConfig: Config) {
+  def getString(key: String): String = rootConfig.getString(key)
+}
+
 //final class AppConfig(conf: Option[Config] = None) extends Serializable {
-trait AppConfig extends Serializable {
+trait HasAppConfig extends Serializable {
 
   val localAddress = InetAddress.getLocalHost.getHostAddress
 
-//  val rootConfig = conf match {
-//    case Some(c) => c.withFallback(ConfigFactory.load)
-//    case _ => ConfigFactory.load
-//  }
+  //  val rootConfig = conf match {
+  //    case Some(c) => c.withFallback(ConfigFactory.load)
+  //    case _ => ConfigFactory.load
+  //  }
   val rootConfig = ConfigFactory.load
 
-//  protected val http = rootConfig.getConfig("http")
+  //  protected val http = rootConfig.getConfig("http")
   //protected val spark = rootConfig.getConfig("spark")
   //  protected val cassandra = rootConfig.getConfig("cassandra")
   //  protected val kafka = ConfigFactory.load.getConfig("kafka")
   //  protected val killrweather = rootConfig.getConfig("killrweather")
 
-//  val HttpHost = withFallback[String](Try(http.getString("host")),
-//    "http.host") getOrElse "localhost"
-//
-//  val HttpPort = withFallback[Int](Try(http.getInt("port")),
-//    "http.port") getOrElse 8080
+  //  val HttpHost = withFallback[String](Try(http.getString("host")),
+  //    "http.host") getOrElse "localhost"
+  //
+  //  val HttpPort = withFallback[Int](Try(http.getInt("port")),
+  //    "http.port") getOrElse 8080
 
   //  val SparkMaster = withFallback[String](Try(spark.getString("master")),
   //    "spark.master") getOrElse "local[*]"
@@ -175,6 +178,7 @@ trait AppConfig extends Serializable {
   //  val DataLoadPath = killrweather.getString("data.load.path")
   //  val DataFileExtension = killrweather.getString("data.file.extension")
 
+  //TODO - the following does not work, determine and implement desired functionality
   /** Attempts to acquire from environment, then java system properties. */
   def withFallback[T](env: Try[T], key: String): Option[T] = {
     //println(env)

@@ -1,23 +1,12 @@
 package com.scaledaction.core.akka
 
-import akka.actor.Actor
-import spray.routing._
-import spray.http._
-import MediaTypes._
+import akka.actor.{ ActorSystem, ActorRefFactory, Actor, Props }
 import akka.io.IO
-import spray.can.Http
-import akka.actor.ActorSystem
-import akka.actor.ActorRef
-import akka.util.Timeout
-import scala.concurrent.duration._
-import akka.actor.{ ActorSystem, Props }
-import akka.io.IO
-import spray.can.Http
 import akka.pattern.ask
 import akka.util.Timeout
-import scala.concurrent.duration._
-import com.typesafe.config.Config
-import akka.actor.{ ActorSystem, ActorRefFactory, Actor, Props }
+import spray.can.Http
+import spray.http._
+import spray.routing._
 
 // TODO - See spray.routing.SimpleRoutingApp
 //github/spray/spray-template/src/main/scala/{Boot.scala, MyService.scala}
@@ -32,13 +21,14 @@ trait HttpServerApp extends HttpService {
   //    shutdownIfNotBound(response)
   //  }
 
-    @volatile private[this] var _refFactory: Option[ActorRefFactory] = None
+  @volatile private[this] var _refFactory: Option[ActorRefFactory] = None
 
   implicit def actorRefFactory = _refFactory getOrElse sys.error(
     "Route creation is not fully supported before `startServer` has been called, " +
       "maybe you can turn your route definition into a `def` ?")
 
-  def startServer(interface: String,
+  def startServer(
+    interface: String,
     port: Int,
     serviceActorName: String = "service-actor",
     requestTimeout: String = "20 s")(route: ⇒ Route)(implicit system: ActorSystem): Unit = {
