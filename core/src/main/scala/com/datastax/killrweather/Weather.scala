@@ -15,7 +15,7 @@
  */
 package com.datastax.killrweather
 
-//import org.joda.time.DateTime
+import org.joda.time.DateTime
 import spray.json.DefaultJsonProtocol
 
 object Weather extends DefaultJsonProtocol {
@@ -89,8 +89,8 @@ object Weather extends DefaultJsonProtocol {
     def apply(d: RawWeatherData): Day =
       Day(d.wsid, d.year, d.month, d.day)
 
-//    def apply(wsid: String, utcTimestamp: DateTime): Day =
-//      Day(wsid, utcTimestamp.getYear, utcTimestamp.getMonthOfYear, utcTimestamp.getDayOfMonth)
+    def apply(wsid: String, utcTimestamp: DateTime): Day =
+      Day(wsid, utcTimestamp.getYear, utcTimestamp.getMonthOfYear, utcTimestamp.getDayOfMonth)
 
     /** Tech debt */
     def apply(line: String): Day = {
