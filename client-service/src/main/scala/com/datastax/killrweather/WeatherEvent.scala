@@ -16,9 +16,10 @@
 package com.datastax.killrweather
 
 import org.joda.time.DateTime
+import spray.json.DefaultJsonProtocol
 
 // TODO document the Event API
-object WeatherEvent {
+object WeatherEvent extends DefaultJsonProtocol {
   import Weather._
 
   /** Base marker trait. */
@@ -41,6 +42,7 @@ object WeatherEvent {
   trait PrecipitationRequest extends WeatherRequest
   case class GetPrecipitation(wsid: String, year: Int) extends PrecipitationRequest
   case class GetTopKPrecipitation(wsid: String, year: Int, k: Int) extends PrecipitationRequest
+  implicit val GetPrecipitationFormat = jsonFormat2(GetPrecipitation)
 
   trait TemperatureRequest extends WeatherRequest
   case class GetDailyTemperature(day: Day) extends TemperatureRequest
