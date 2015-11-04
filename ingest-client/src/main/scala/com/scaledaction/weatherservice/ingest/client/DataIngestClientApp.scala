@@ -9,6 +9,7 @@ import spray.httpx.SprayJsonSupport._
 import spray.json.DefaultJsonProtocol
 import scala.util.{Try, Success, Failure}
 import scala.concurrent.Future
+import com.typesafe.config.{ Config, ConfigFactory }
 
 import com.datastax.killrweather.Weather._
 import ClientHelper._
@@ -21,18 +22,24 @@ object DataIngestClientApp extends App {
     
     log.info("Loading raw weather data from file and posting as individual Json records to WeatherService ingest-api.")
     
+    val config = ConfigFactory.load
+    Try(config.getString("weatherservice.data.load.path")) match {
+        case Success(filePath) => csvFileToJsonIngest(filePath)
+        case Failure(f) => log.error("Failed to get data file path: " + f)
+    }
+    
     def csvFileToJsonIngest(filePath: String) = {
-        val fs = FileSource(new JFile(filePath))
-        val data = fs.data
-        
-        import scala.util.{Try, Success, Failure}
-        
-        for(record <- data){
-            val splitValues = Try(record.split(","))
-            splitValues match {
-                case Success(values) => postJson(values)
-                case Failure(f) => log.info("csvFileToJsonIngest split error: " + f)
-            }
+        Try(FileSource(new JFile(filePath))) match {
+            case Success(fs) => 
+                for(record <- fs.data){
+                    val splitValues = Try(record.split(","))
+                    splitValues match {
+                        case Success(values) => postJson(values)
+                        case Failure(f) => 
+                            log.info("csvFileToJsonIngest split error: " + f)
+                    }
+                }
+            case Failure(f) => log.error("Failed to open file: " + f)
         }
     }
 
