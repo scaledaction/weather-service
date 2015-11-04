@@ -45,9 +45,7 @@ object DataIngestClientApp extends App {
     private def csvFileToJsonIngest(filePath: String, targetUrl: String) = {
         log.info("csvFileToJsonIngest, filePath: " + filePath + 
                  " targetUrl: " + targetUrl)
-                 
-        // Successful request/response counters
-        
+                         
         Try(FileSource(new JFile(filePath))) match {
             case Success(fs) => 
                 for(record <- fs.data){
