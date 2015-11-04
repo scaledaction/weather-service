@@ -1,15 +1,20 @@
 package com.scaledaction.weatherservice.ingest.client
 
 import akka.actor.ActorSystem
+import akka.pattern.ask
 import akka.event.Logging
+import akka.io.IO
 import java.io.{BufferedInputStream, FileInputStream, File => JFile}
 import spray.http._
+import spray.can.Http
 import spray.client.pipelining._
 import spray.httpx.SprayJsonSupport._
 import spray.json.DefaultJsonProtocol
 import scala.util.{Try, Success, Failure}
 import scala.concurrent.Future
+import scala.concurrent.duration._
 import com.typesafe.config.{ Config, ConfigFactory }
+import spray.util._
 
 import com.datastax.killrweather.Weather._
 import ClientHelper._
@@ -25,7 +30,9 @@ object DataIngestClientApp extends App {
     val config = ConfigFactory.load
     Try(config.getString("weatherservice.data.load.path")) match {
         case Success(filePath) => csvFileToJsonIngest(filePath)
-        case Failure(f) => log.error("Failed to get data file path: " + f)
+        case Failure(f) => 
+            log.error("Failed to get data file path: " + f)
+            shutdown()
     }
     
     def csvFileToJsonIngest(filePath: String) = {
@@ -43,8 +50,9 @@ object DataIngestClientApp extends App {
                 }
             case Failure(f) => 
                 log.error("Failed to open file: " + f)
+                shutdown()
         }
-        
+        shutdown() // We are through.
     }
 
     def postJson(attr: Array[String]) {
@@ -82,6 +90,11 @@ object DataIngestClientApp extends App {
             oneHourPrecip = values(11).toDouble,
             sixHourPrecip = Option(values(12).toDouble).getOrElse(0)
         )
+    }
+    
+    def shutdown(): Unit = {
+        IO(Http).ask(Http.CloseAll)(1.second).await
+        system.shutdown()
     }
 }
 
