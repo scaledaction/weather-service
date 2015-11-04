@@ -17,7 +17,6 @@ object DataIngestClientApp extends App {
     
     implicit val system = ActorSystem("DataIngestClientApp")
     import system.dispatcher // execution context for futures
-    import system.dispatcher // execution context for futures below
     val log = Logging(system, getClass)
     
     log.info("Loading raw weather data from file and posting as individual Json records to WeatherService ingest-api.")
