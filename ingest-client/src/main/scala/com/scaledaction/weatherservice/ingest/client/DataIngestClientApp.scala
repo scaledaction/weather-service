@@ -36,14 +36,20 @@ object DataIngestClientApp extends App {
         }
     }
 
-    def postJson(values: Array[String]) {
+    def postJson(attr: Array[String]) {
         val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
         
-        Try(constructRawWeather(values)) match {
+        Try(constructRawWeather(attr)) match {
             case Success(rwd) =>     
-                val response: Future[HttpResponse] = 
+                val responseFuture: Future[HttpResponse] = 
                     pipeline(Get("http://127.0.0.1:8081/weather/data/json", rwd))
-            case Failure(f) => log.error("Failed to construct raw weather data from values: " + values)
+                    
+                    responseFuture onComplete {
+                        case Success(response) => // TODO
+                        case Failure(f) => log.error("Failed raw weather post: " + f)
+                    }
+                    
+            case Failure(f) => log.error("Failed to construct raw weather data from values: " + attr + "/n" + f)
         }
     }
     
