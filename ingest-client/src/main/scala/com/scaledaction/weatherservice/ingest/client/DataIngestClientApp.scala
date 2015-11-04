@@ -29,21 +29,31 @@ object DataIngestClientApp extends App {
     
     val config = ConfigFactory.load
     Try(config.getString("weatherservice.data.load.path")) match {
-        case Success(filePath) => csvFileToJsonIngest(filePath)
+        case Success(filePath) =>
+            Try(config.getString("weatherservice.data.target.url")) match {
+                case Success(targetUrl) =>
+                    csvFileToJsonIngest(filePath, targetUrl)
+                case Failure(f) =>
+                    log.error("Failed to get target url: " + f)
+                    shutdown()
+            }
         case Failure(f) => 
             log.error("Failed to get data file path: " + f)
             shutdown()
     }
     
-    def csvFileToJsonIngest(filePath: String) = {
-        log.info("csvFileToJsonIngest, filePath: " + filePath)
+    private def csvFileToJsonIngest(filePath: String, targetUrl: String) = {
+        log.info("csvFileToJsonIngest, filePath: " + filePath + 
+                 " targetUrl: " + targetUrl)
+                 
+        // Successful request/response counters
         
         Try(FileSource(new JFile(filePath))) match {
             case Success(fs) => 
                 for(record <- fs.data){
                     val splitValues = Try(record.split(","))
                     splitValues match {
-                        case Success(values) => postJson(values)
+                        case Success(values) => postJson(values, targetUrl)
                         case Failure(f) => 
                             log.info("csvFileToJsonIngest split error: " + f)
                     }
@@ -52,28 +62,31 @@ object DataIngestClientApp extends App {
                 log.error("Failed to open file: " + f)
                 shutdown()
         }
+        Thread.sleep(120000) // TODO: This is a one-time finite data load operation bound to starting the app and should close for convenience.
+        log.info("Ingestion operation completed, calling shutdown.")
         shutdown() // We are through.
     }
 
-    def postJson(attr: Array[String]) {
+    private def postJson(attr: Array[String], targetUrl: String) {
         val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
         
         Try(constructRawWeather(attr)) match {
             case Success(rwd) =>     
                 val responseFuture: Future[HttpResponse] = 
-                    pipeline(Post("http://127.0.0.1:5000/weather/data/json", rwd))
-                    // TODO: This url needs to come from config. 5000 is KW app.
+                    pipeline(Post(targetUrl, rwd))
                     
                     responseFuture onComplete {
                         case Success(response) => // log.info("Success response: " + response)
                         case Failure(f) => log.error("Failed raw weather post: " + f)
                     }
                     
-            case Failure(f) => log.error("Failed to construct raw weather data from values: " + attr + "/n" + f)
+            case Failure(f) => 
+                log.error("Failed to construct raw weather data from values: " + 
+                    attr + "/nReason:/n" + f.getMessage)
         }
     }
     
-    def constructRawWeather(values: Array[String]) = {
+    private def constructRawWeather(values: Array[String]) = {
         RawWeatherData(                    
             wsid = values(0),
             year = values(1).toInt,
@@ -92,7 +105,7 @@ object DataIngestClientApp extends App {
         )
     }
     
-    def shutdown(): Unit = {
+    private def shutdown(): Unit = {
         IO(Http).ask(Http.CloseAll)(1.second).await
         system.shutdown()
     }
