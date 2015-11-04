@@ -29,6 +29,17 @@ object DataIngestClientApp extends App {
     }
     
     def csvFileToJsonIngest(filePath: String) = {
+        log.info("csvFileToJsonIngest, filePath: " + filePath)
+        
+        // DIAGNOSTIC
+        /*
+        val whatsHere = new JFile(filePath)
+        println("whatsHere.exists(): " + whatsHere.exists())
+        println("whatsHere.isDirectory(): " + whatsHere.isDirectory())
+        println("whatsHere.getAbsolutePath: " + whatsHere.getAbsolutePath)
+        whatsHere.list foreach println
+        */
+        
         Try(FileSource(new JFile(filePath))) match {
             case Success(fs) => 
                 for(record <- fs.data){
@@ -49,7 +60,7 @@ object DataIngestClientApp extends App {
         Try(constructRawWeather(attr)) match {
             case Success(rwd) =>     
                 val responseFuture: Future[HttpResponse] = 
-                    pipeline(Get("http://127.0.0.1:8081/weather/data/json", rwd))
+                    pipeline(Post("http://127.0.0.1:5000/weather/data/json", rwd))
                     
                     responseFuture onComplete {
                         case Success(response) => // TODO
