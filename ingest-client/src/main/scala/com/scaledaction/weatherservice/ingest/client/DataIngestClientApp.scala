@@ -31,18 +31,20 @@ object DataIngestClientApp extends App {
             val splitValues = Try(record.split(","))
             splitValues match {
                 case Success(values) => postJson(values)
-                case Failure(f) => println(">>>>> csvFileToJsonIngest split ERROR: " + f)
-            } // end splitValues match
-        } // end for(record <- data)
-        // TODO: Add counter ?
-        "---->>> Kafka csv-to-json batch ingest messages sent"
+                case Failure(f) => log.info("csvFileToJsonIngest split error: " + f)
+            }
+        }
     }
 
     def postJson(values: Array[String]) {
         val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
-    
-        val response: Future[HttpResponse] = 
-            pipeline(Get("http://spray.io/", constructRawWeather(values)))
+        
+        Try(constructRawWeather(values)) match {
+            case Success(rwd) =>     
+                val response: Future[HttpResponse] = 
+                    pipeline(Get("http://127.0.0.1:8081/weather/data/json", rwd))
+            case Failure(f) => log.error("Failed to construct raw weather data from values: " + values)
+        }
     }
     
     def constructRawWeather(values: Array[String]) = {
