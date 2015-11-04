@@ -31,15 +31,6 @@ object DataIngestClientApp extends App {
     def csvFileToJsonIngest(filePath: String) = {
         log.info("csvFileToJsonIngest, filePath: " + filePath)
         
-        // DIAGNOSTIC
-        /*
-        val whatsHere = new JFile(filePath)
-        println("whatsHere.exists(): " + whatsHere.exists())
-        println("whatsHere.isDirectory(): " + whatsHere.isDirectory())
-        println("whatsHere.getAbsolutePath: " + whatsHere.getAbsolutePath)
-        whatsHere.list foreach println
-        */
-        
         Try(FileSource(new JFile(filePath))) match {
             case Success(fs) => 
                 for(record <- fs.data){
@@ -50,8 +41,10 @@ object DataIngestClientApp extends App {
                             log.info("csvFileToJsonIngest split error: " + f)
                     }
                 }
-            case Failure(f) => log.error("Failed to open file: " + f)
+            case Failure(f) => 
+                log.error("Failed to open file: " + f)
         }
+        
     }
 
     def postJson(attr: Array[String]) {
@@ -61,9 +54,10 @@ object DataIngestClientApp extends App {
             case Success(rwd) =>     
                 val responseFuture: Future[HttpResponse] = 
                     pipeline(Post("http://127.0.0.1:5000/weather/data/json", rwd))
+                    // TODO: This url needs to come from config. 5000 is KW app.
                     
                     responseFuture onComplete {
-                        case Success(response) => // TODO
+                        case Success(response) => // log.info("Success response: " + response)
                         case Failure(f) => log.error("Failed raw weather post: " + f)
                     }
                     
