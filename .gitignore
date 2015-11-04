@@ -19,3 +19,6 @@ project/plugins/project/
 /bin
 .classpath
 .project
+
+# Local
+.DS_Store

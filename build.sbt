@@ -22,6 +22,12 @@ lazy val ingest_api = (project in file("ingest-api"))
   .settings(globalSettings:_*)
   .settings(libraryDependencies ++= ingest_api_deps)
 
+lazy val ingest_client = (project in file("ingest-client"))
+  .dependsOn(core)
+  .settings(name := s"${modulePrefix}-ingest-client")
+  .settings(globalSettings:_*)
+  .settings(libraryDependencies ++= ingest_client_deps)
+
 lazy val ingest_backend = (project in file("ingest-backend"))
                        .settings(name := s"${modulePrefix}-ingest-backend")
                        .settings(globalSettings:_*)
@@ -82,6 +88,24 @@ lazy val ingest_api_deps = Seq(
   "io.spray"               %% "spray-testkit"         % sprayVersion   % "test",
   "com.typesafe.akka"      %% "akka-testkit"          % akkaVersion    % "test",
   "org.apache.kafka" % "kafka_2.10" % kafkaVersion
+    exclude("javax.jms", "jms")
+    exclude("com.sun.jdmk", "jmxtools")
+    exclude("com.sun.jmx", "jmxri")
+)
+
+lazy val ingest_client_deps = Seq(
+  "com.typesafe.akka"      %% "akka-actor"            % akkaVersion,
+  "com.typesafe.akka"      %% "akka-slf4j"            % akkaVersion,
+  "io.spray"               %% "spray-can"             % sprayVersion,
+  "io.spray"               %% "spray-client"          % sprayVersion,
+  "io.spray"               %% "spray-routing"         % sprayVersion,
+  "io.spray"               %% "spray-http"            % sprayVersion,
+  "io.spray"               %% "spray-httpx"           % sprayVersion,
+  "io.spray"               %% "spray-util"            % sprayVersion,
+  "io.spray"               %% "spray-json"            % "1.3.2",
+  "org.specs2"             %% "specs2"                % "2.2.2"        % "test",
+  "io.spray"               %% "spray-testkit"         % sprayVersion   % "test",
+  "com.typesafe.akka"      %% "akka-testkit"          % akkaVersion    % "test"
     exclude("javax.jms", "jms")
     exclude("com.sun.jdmk", "jmxtools")
     exclude("com.sun.jmx", "jmxri")
