@@ -1,17 +1,15 @@
 package com.scaledaction.weatherservice.ingest.api
 
 import akka.actor.{ ActorSystem, Props }
-import com.scaledaction.core.akka.{ HttpServerApp, HasHttpServerConfig }
+import com.scaledaction.core.akka.HttpServerApp
 
-object DataIngestApiApp extends App with HttpServerApp with HasHttpServerConfig {
+object DataIngestApiApp extends App with HttpServerApp {
 
   implicit val system = ActorSystem("data-ingest")
 
-  val producer = system.actorOf(Props(new KafkaProducerActor))
+  val kafkaProducer = system.actorOf(Props(new KafkaProducerActor))
 
-  val route = new DataIngestApi(producer).route
+  val route = new DataIngestApi(kafkaProducer).route
 
-  val httpConfig = getHttpServerConfig
-
-  startServer(interface = httpConfig.host, port = httpConfig.port)(route)
+  startServer(route)
 }

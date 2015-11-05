@@ -67,18 +67,30 @@ trait HasKafkaConfig extends HasAppConfig {
 
   def getKafkaConfig(rootName: String): KafkaConfig = getKafkaConfig(rootConfig.getConfig(rootName))
 
+  //kafka {
+  //  brokers = ["127.0.0.1:9092"]
+  //  brokers = [${?KAFKA_BROKERS}]
+  //  
+  //  topic = "killrweather.raw"
+  //  topic = [${?KAFKA_TOPIC}]
+  //  
+  //  key_serializer = "org.apache.kafka.common.serialization.StringSerializer"
+  //  value_serializer = "org.apache.kafka.common.serialization.StringSerializer"
+  //  
+  //  #ingest-rate = 1s
+  //  #group.id = "killrweather.group"
+  //  #batch.send.size = 100   
+  //}
+
   private def getKafkaConfig(kafka: Config): KafkaConfig = {
-    val brokers = withFallback[String](Try(kafka.getString("brokers")),
-      "kafka.brokers") getOrElse "127.0.0.1:9092"
 
-    val topic = withFallback[String](Try(kafka.getString("topic")),
-      "kafka.topic") getOrElse "killrweather.raw"
+    val brokers = getRequiredValue("KAFKA_BROKERS", (kafka, "brokers"), "127.0.0.1:9092")
 
-    val keySerializer = withFallback[String](Try(kafka.getString("key_serializer")),
-      "kafka.key_serializer") getOrElse "org.apache.kafka.common.serialization.StringSerializer"
+    val topic = getRequiredValue("KAFKA_TOPIC", (kafka, "topic"), "killrweather.raw")
 
-    val valueSerializer = withFallback[String](Try(kafka.getString("value_serializer")),
-      "kafka.value_serializer") getOrElse "org.apache.kafka.common.serialization.StringSerializer"
+    val keySerializer = getRequiredValue((kafka, "key_serializer"), "org.apache.kafka.common.serialization.StringSerializer")
+
+    val valueSerializer = getRequiredValue((kafka, "value_serializer"), "org.apache.kafka.common.serialization.StringSerializer")
 
     new KafkaConfig(brokers, topic, keySerializer, valueSerializer, kafka)
   }

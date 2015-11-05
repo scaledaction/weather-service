@@ -16,9 +16,8 @@
 package com.scaledaction.core.config
 
 import java.net.InetAddress
-
-import scala.util.Try
 import com.typesafe.config.{ Config, ConfigFactory }
+import scala.util.{ Try, Success, Failure }
 
 /**
  * Application settings. First attempts to acquire from the deploy environment.
@@ -57,17 +56,44 @@ trait HasAppConfig extends Serializable {
   //  }
   val rootConfig = ConfigFactory.load
 
+  //TODO - Document me. Returns the value obtained in the following order of precedence: environment variable, java system property, config file, specified default value
+  /** Attempts to acquire from environment, then java system properties. */
+  def getRequiredValue(envVarName: String, config: (Config, String), defaultValue: String): String = {
+    val (configRoot, configName) = config
+    val envVar = Try(sys.env(envVarName))
+    envVar match {
+      case Success(v) => v
+      case Failure(_) => getRequiredValue(config, defaultValue)
+    }
+  }
+
+  def getRequiredValue(config: (Config, String), defaultValue: String): String = {
+    val (configRoot, configName) = config
+    Try(configRoot.getString(configName)) getOrElse defaultValue
+  }
+
+  def getRequiredValue(envVarName: String, config: (Config, String), defaultValue: Int): Int = {
+    val (configRoot, configName) = config
+    val envVar = Try(sys.env(envVarName).toInt)
+    envVar match {
+      case Success(v) => v
+      case Failure(_) => Try(configRoot.getInt(configName)) getOrElse defaultValue
+    }
+  }
+
+  import akka.util.Timeout
+  import scala.concurrent.duration._
+
+  protected def stringToDuration(t: String): Timeout = {
+    val d = Duration(t)
+    FiniteDuration(d.length, d.unit)
+  }
+
   //  protected val http = rootConfig.getConfig("http")
   //protected val spark = rootConfig.getConfig("spark")
   //  protected val cassandra = rootConfig.getConfig("cassandra")
   //  protected val kafka = ConfigFactory.load.getConfig("kafka")
   //  protected val killrweather = rootConfig.getConfig("killrweather")
-
-  //  val HttpHost = withFallback[String](Try(http.getString("host")),
-  //    "http.host") getOrElse "localhost"
-  //
-  //  val HttpPort = withFallback[Int](Try(http.getInt("port")),
-  //    "http.port") getOrElse 8080
 
   //  val SparkMaster = withFallback[String](Try(spark.getString("master")),
   //    "spark.master") getOrElse "local[*]"
@@ -159,15 +185,7 @@ trait HasAppConfig extends Serializable {
   //      "spark.cassandra.output.consistency.level") getOrElse ConsistencyLevel.LOCAL_ONE.name)
   //
   //  val CassandraDefaultMeasuredInsertsCount: Int = 128
-  //
-  //  val KafkaGroupId = kafka.getString("group.id")
-  //  val KafkaTopicRaw = kafka.getString("topic.raw")
-  //  val KafkaEncoderFqcn = kafka.getString("encoder.fqcn")
-  //  val KafkaDecoderFqcn = kafka.getString("decoder.fqcn")
-  //  val KafkaPartitioner = kafka.getString("partitioner.fqcn")
-  //  val KafkaBatchSendSize = kafka.getInt("batch.send.size")
 
-  //  val AppName = killrweather.getString("app-name")
   //  val CassandraKeyspace = killrweather.getString("cassandra.keyspace")
   //  val CassandraTableRaw = killrweather.getString("cassandra.table.raw")
   //  val CassandraTableDailyTemp = killrweather.getString("cassandra.table.daily.temperature")
@@ -177,14 +195,4 @@ trait HasAppConfig extends Serializable {
   //  val CassandraTableStations = killrweather.getString("cassandra.table.stations")
   //  val DataLoadPath = killrweather.getString("data.load.path")
   //  val DataFileExtension = killrweather.getString("data.file.extension")
-
-  //TODO - the following does not work, determine and implement desired functionality
-  /** Attempts to acquire from environment, then java system properties. */
-  def withFallback[T](env: Try[T], key: String): Option[T] = {
-    //println(env)
-    env match {
-      case null => None
-      case value => value.toOption
-    }
-  }
 }

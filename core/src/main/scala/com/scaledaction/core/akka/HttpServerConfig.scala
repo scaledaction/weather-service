@@ -18,6 +18,7 @@ package com.scaledaction.core.akka
 import scala.util.Try
 import com.typesafe.config.Config
 import com.scaledaction.core.config.{ AppConfig, HasAppConfig }
+import akka.util.Timeout
 
 /**
  * Application settings. First attempts to acquire from the deploy environment.
@@ -43,9 +44,10 @@ import com.scaledaction.core.config.{ AppConfig, HasAppConfig }
 class HttpServerConfig(
   val host: String,
   val port: Int,
+  val requestTimeout: Timeout,
   rootConfig: Config) extends AppConfig(rootConfig: Config) {
 
-  override def toString(): String = s"host: ${host}, port: ${port}"
+  override def toString(): String = s"host: ${host}, port: ${port}, requestTimeout: ${requestTimeout}"
 }
 
 trait HasHttpServerConfig extends HasAppConfig {
@@ -54,13 +56,30 @@ trait HasHttpServerConfig extends HasAppConfig {
 
   def getHttpServerConfig(rootName: String): HttpServerConfig = getHttpServerConfig(rootConfig.getConfig(rootName))
 
+  //http {
+  //  host = "localhost"
+  //  host = ${?HTTP_HOST}  
+  //  port = 8081
+  //  port = ${?HTTP_PORT}  
+  //}
+
+  //spray.can {
+  //  server {
+  //    # If a request hasn't been responded to after the time period set here
+  //    # a `spray.http.Timedout` message will be sent to the timeout handler.
+  //    # Set to `infinite` to completely disable request timeouts.
+  //    request-timeout = 20 s    
+  //}
+
   private def getHttpServerConfig(http: Config): HttpServerConfig = {
-    val host = withFallback[String](Try(http.getString("host")),
-      "http.host") getOrElse "localhost"
 
-    val port = withFallback[Int](Try(http.getInt("port")),
-      "http.port") getOrElse 8080
+    val host = getRequiredValue("HTTP_HOST", (http, "host"), "localhost")
 
-    new HttpServerConfig(host, port, http)
+    val port = getRequiredValue("HTTP_PORT", (http, "port"), 8080)
+
+    val spray = rootConfig.getConfig("spray")
+    val timeout = stringToDuration(getRequiredValue("HTTP_TIMEOUT", (spray, "can.server.request-timeout"), "20 s"))
+
+    new HttpServerConfig(host, port, timeout, http)
   }
 }
