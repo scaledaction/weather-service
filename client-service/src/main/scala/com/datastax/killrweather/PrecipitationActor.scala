@@ -15,47 +15,59 @@
  */
 package com.datastax.killrweather
 
-import akka.actor.{ActorLogging, Actor, ActorRef}
+import akka.actor.{ ActorLogging, Actor, ActorRef }
 import akka.pattern.pipe
-import org.apache.spark.SparkContext._
-import org.apache.spark.streaming.StreamingContext
 import com.datastax.spark.connector.streaming._
+import com.scaledaction.core.cassandra.CassandraConfig
+import org.apache.spark.streaming.StreamingContext
 
 /** For a given weather station, calculates annual cumulative precip - or year to date. */
 //class PrecipitationActor(ssc: StreamingContext, settings: WeatherSettings)
-class PrecipitationActor()
+//class PrecipitationActor(ssc: StreamingContext, cassandraConfig: CassandraConfig,weatherServiceAppConfig: WeatherServiceAppConfig)
+class PrecipitationActor(ssc: StreamingContext, cassandraConfig: CassandraConfig)
   extends AggregationActor with ActorLogging {
+
   import Weather._
   import WeatherEvent._
-//  import settings.{CassandraKeyspace => keyspace}
-//  import settings.{CassandraTableDailyPrecip => dailytable}
 
-  def receive : Actor.Receive = {
-    case GetPrecipitation(wsid, year)        => cumulative(wsid, year, sender)
+  val keyspace = cassandraConfig.keyspace
+
+  //TODO - Add a WeatherServiceAppConfig and replace the hard-coded "dailytable" value
+  //  import settings.{CassandraTableDailyPrecip => dailytable}
+  //  val CassandraTableDailyPrecip = killrweather.getString("cassandra.table.daily.precipitation")
+  //  cassandra {
+  //    table.daily.precipitation = "daily_aggregate_precip"
+  //  }
+  val dailytable = "daily_aggregate_precip"
+
+  def receive: Actor.Receive = {
+    case GetPrecipitation(wsid, year) => cumulative(wsid, year, sender)
     case GetTopKPrecipitation(wsid, year, k) => topK(wsid, year, k, sender)
   }
 
-  /** Computes and sends the annual aggregation to the `requester` actor.
-    * Precipitation values are 1 hour deltas from the previous. */
+  /**
+   * Computes and sends the annual aggregation to the `requester` actor.
+   * Precipitation values are 1 hour deltas from the previous.
+   */
   def cumulative(wsid: String, year: Int, requester: ActorRef): Unit = {
-//    ssc.cassandraTable[Double](keyspace, dailytable)
-//      .select("precipitation")
-//      .where("wsid = ? AND year = ?", wsid, year)
-//      .collectAsync()
-//      .map(AnnualPrecipitation(_, wsid, year)) pipeTo requester
-  println(s"cumulative() wsid: $wsid, year: $year")
-    scala.concurrent.Future(Some(AnnualPrecipitation(wsid, year, 999.0))) pipeTo requester
-}
+    ssc.cassandraTable[Double](keyspace, dailytable)
+      .select("precipitation")
+      .where("wsid = ? AND year = ?", wsid, year)
+      .collectAsync()
+      //.map(AnnualPrecipitation(_, wsid, year)) pipeTo requester
+      .map(aggregate => AnnualPrecipitation(wsid, year, aggregate.sum)) pipeTo requester
+    //    println(s"cumulative() wsid: $wsid, year: $year")
+    //    scala.concurrent.Future(Some(AnnualPrecipitation(wsid, year, 999.0))) pipeTo requester
+  }
 
   /** Returns the 10 highest temps for any station in the `year`. */
   def topK(wsid: String, year: Int, k: Int, requester: ActorRef): Unit = {
-//    val toTopK = (aggregate: Seq[Double]) => TopKPrecipitation(wsid, year,
-//      ssc.sparkContext.parallelize(aggregate).top(k).toSeq)
-//
-//    ssc.cassandraTable[Double](keyspace, dailytable)
-//      .select("precipitation")
-//      .where("wsid = ? AND year = ?", wsid, year)
-//      .collectAsync().map(toTopK) pipeTo requester
+    val toTopK = (aggregate: Seq[Double]) => TopKPrecipitation(wsid, year,
+      ssc.sparkContext.parallelize(aggregate).top(k).toSeq)
+
+    ssc.cassandraTable[Double](keyspace, dailytable)
+      .select("precipitation")
+      .where("wsid = ? AND year = ?", wsid, year)
+      .collectAsync().map(toTopK) pipeTo requester
   }
 }
-

@@ -1,20 +1,15 @@
 package com.scaledaction.weatherservice.client.service
 
-import spray.routing.Directives
-import spray.http.MediaTypes._
 import akka.actor.ActorRef
-import spray.httpx.SprayJsonSupport._
-import com.datastax.killrweather.WeatherEvent._
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
+import com.datastax.killrweather.WeatherEvent._
+import com.datastax.killrweather.Weather.AnnualPrecipitation
+import scala.concurrent.duration._
+import spray.http.MediaTypes._
 import spray.http.StatusCodes._
 import spray.httpx.SprayJsonSupport._
-import spray.routing._
-import com.datastax.killrweather.Weather.AnnualPrecipitation
+import spray.routing.HttpServiceActor
 
 //class RestApi(timeout: Timeout) extends HttpServiceActor
 //    with RestRoutes {
@@ -30,42 +25,27 @@ import com.datastax.killrweather.Weather.AnnualPrecipitation
 //http GET http://127.0.0.1:8080/weather/precipitation wsid="724940:23234" year:=2008
 
 //class ClientService(val receiver: ActorRef, timeout: Timeout,  context: ExecutionContext) extends Directives {
-class ClientService(val receiver: ActorRef) extends HttpServiceActor {
-  //class ClientService() extends Directives {
-  //implicit val requestTimeout = timeout
+class ClientService(precipitation: ActorRef, temperature: ActorRef, weatherStation: ActorRef) extends HttpServiceActor {
+
   implicit val timeout = stringToDuration("20 s")
   implicit def executionContext = context.dispatcher
 
   def receive = runRoute(route)
-  //  val route =
-  //    path("") {
-  //      get {
-  //        respondWithMediaType(`text/html`) {
-  //          complete {
-  //            //Thread.sleep(22000)
-  //            //TODO  Implement me
-  //            //receiver ! "RawWeatherData"
-  //            <html>
-  //              <body>
-  //                <h1>Weather Service Client API</h1>
-  //              </body>
-  //            </html>
-  //          }
-  //        }
-  //      }
-  //    }
 
-  val route =
+  val route = precipitationRoute
+  //TODO - Route me
+  //val route = precipitationRoute ~ temperatureRoute ~ weatherStationRoute
+
+  val precipitationRoute =
     pathPrefix("weather" / Segment) { event =>
       //pathEndOrSingleSlash {
-        get {
-          // POST /events/:event
-          entity(as[GetPrecipitation]) { precip =>
-            onSuccess(getEvent(precip)) {
-              _.fold(complete(NotFound))(e => complete(OK, e))
-//              _.fold(complete(NotFound))(e => complete(OK))
-            }
+      get {
+        // POST /events/:event
+        entity(as[GetPrecipitation]) { precip =>
+          onSuccess(getPrecipitation(precip)) {
+            _.fold(complete(NotFound))(e => complete(OK, e))
           }
+        }
         //}
         //        ~
         //          get {
@@ -88,25 +68,10 @@ class ClientService(val receiver: ActorRef) extends HttpServiceActor {
     FiniteDuration(d.length, d.unit)
   }
 
-  def getEvent(precip: GetPrecipitation) =
-    receiver.ask(precip)
+  def getPrecipitation(precip: GetPrecipitation) =
+    precipitation.ask(precip)
       .mapTo[Option[AnnualPrecipitation]]
 }
-//        } ~
-//        get {
-//          // GET /events/:event
-//          onSuccess(getEvent(event)) {
-//            _.fold(complete(NotFound))(e => complete(OK, e))
-//          }
-//        } ~
-//        delete {
-//          // DELETE /events/:event
-//          onSuccess(cancelEvent(event)) {
-//            _.fold(complete(NotFound))(e => complete(OK, e))
-//          }
-//        }
-//      }
-//    }
 
 // Client Service REST API:
 //

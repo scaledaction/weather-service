@@ -15,43 +15,55 @@
  */
 package com.datastax.killrweather
 
-import akka.actor.{ActorLogging, Actor, ActorRef}
+import akka.actor.{ ActorLogging, Actor, ActorRef }
 import akka.pattern.pipe
+import com.datastax.spark.connector._
+import com.scaledaction.core.cassandra.CassandraConfig
 import org.apache.spark.SparkContext
 import org.apache.spark.util.StatCounter
-import org.apache.spark.SparkContext._
-import com.datastax.spark.connector._
 
-/** The TemperatureActor reads the daily temperature rollup data from Cassandra,
-  * and for a given weather station, computes temperature statistics by month for a given year.
-  */
-class TemperatureActor(sc: SparkContext, settings: WeatherSettings)
+/**
+ * The TemperatureActor reads the daily temperature rollup data from Cassandra,
+ * and for a given weather station, computes temperature statistics by month for a given year.
+ */
+//class TemperatureActor(sc: SparkContext, settings: WeatherSettings)
+class TemperatureActor(sc: SparkContext, cassandraConfig: CassandraConfig)
   extends AggregationActor with ActorLogging {
 
-  import settings.{CassandraKeyspace => keyspace}
-  import settings.{CassandraTableDailyTemp => dailytable}
-  import settings.{CassandraTableRaw => rawtable}
   import WeatherEvent._
   import Weather._
 
+  val keyspace = cassandraConfig.keyspace
+
+  //TODO - Add a WeatherServiceAppConfig and replace the hard-coded "dailytable" and "rawtable" values
+  //  cassandra {
+  //    table.raw = "raw_weather_data"
+  //    table.daily.temperature = "daily_aggregate_temperature"
+  //  }
+  //  import settings.{CassandraTableDailyTemp => dailytable}
+  val dailytable = "daily_aggregate_temperature"
+  //  import settings.{CassandraTableRaw => rawtable}
+  val rawtable = "raw_weather_data"
+
   def receive: Actor.Receive = {
-    case e: GetDailyTemperature        => daily(e.day, sender)
-    case e: DailyTemperature           => store(e)
+    case e: GetDailyTemperature => daily(e.day, sender)
+    case e: DailyTemperature => store(e)
     case e: GetMonthlyHiLowTemperature => highLow(e, sender)
   }
 
-  /** Computes and sends the daily aggregation to the `requester` actor.
-    * We aggregate this data on-demand versus in the stream.
-    *
-    * For the given day of the year, aggregates 0 - 23 temp values to statistics:
-    * high, low, mean, std, etc., and persists to Cassandra daily temperature table
-    * by weather station, automatically sorted by most recent - due to our cassandra schema -
-    * you don't need to do a sort in spark.
-    *
-    * Because the gov. data is not by interval (window/slide) but by specific date/time
-    * we look for historic data for hours 0-23 that may or may not already exist yet
-    * and create stats on does exist at the time of request.
-    */
+  /**
+   * Computes and sends the daily aggregation to the `requester` actor.
+   * We aggregate this data on-demand versus in the stream.
+   *
+   * For the given day of the year, aggregates 0 - 23 temp values to statistics:
+   * high, low, mean, std, etc., and persists to Cassandra daily temperature table
+   * by weather station, automatically sorted by most recent - due to our cassandra schema -
+   * you don't need to do a sort in spark.
+   *
+   * Because the gov. data is not by interval (window/slide) but by specific date/time
+   * we look for historic data for hours 0-23 that may or may not already exist yet
+   * and create stats on does exist at the time of request.
+   */
   def daily(day: Day, requester: ActorRef): Unit =
     sc.cassandraTable[Double](keyspace, rawtable)
       .select("temperature").where("wsid = ? AND year = ? AND month = ? AND day = ?",
@@ -68,11 +80,11 @@ class TemperatureActor(sc: SparkContext, settings: WeatherSettings)
       .collectAsync()
       .map(toMonthly(_, e.wsid, e.year, e.month)) pipeTo requester
 
-
-  /** Stores the daily temperature aggregates asynchronously which are triggered
-    * by on-demand requests during the `forDay` function's `self ! data`
-    * to the daily temperature aggregation table.
-    */
+  /**
+   * Stores the daily temperature aggregates asynchronously which are triggered
+   * by on-demand requests during the `forDay` function's `self ! data`
+   * to the daily temperature aggregation table.
+   */
   private def store(e: DailyTemperature): Unit =
     sc.parallelize(Seq(e)).saveToCassandra(keyspace, dailytable)
 
