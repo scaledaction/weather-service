@@ -10,12 +10,25 @@ import spray.httpx.SprayJsonSupport._
 
 class DataIngestApi(val receiver: ActorRef) extends Directives {
 
-    val route = post {
-        path("weather"/"data"/"json") {
-            handleWith { rawRecord: RawWeatherData =>
-                receiver ! rawRecord
-                rawRecord
-            }
-        }
+  val route = post {
+    path("weather" / "data" / "json") {
+      handleWith { rawRecord: RawWeatherData =>
+        receiver ! rawRecord
+        rawRecord
+      }
     }
+  }
+
+  //  val route = post {
+  //    path("weather" / "data" / "json") {
+  //      entity(as[RawWeatherData]) { rawRecord =>
+  //        onSuccess(postWeatherData(rawRecord)) {
+  //          _.fold(complete(NotFound))(e => complete(OK, e))
+  //        }
+  //      }
+  //    }
+  //  }
+  //
+  //  def postWeatherData(rawRecord: RawWeatherData) =
+  //    receiver ! rawRecord
 }
