@@ -66,7 +66,7 @@ class TemperatureActor(sc: SparkContext, cassandraConfig: CassandraConfig)
    * and create stats on does exist at the time of request.
    */
   def daily(day: Day, requester: ActorRef): Unit = {
-    println("daily()")
+    println("---->TemperatureActor.daily")
     sc.cassandraTable[Double](keyspace, rawtable)
       .select("temperature").where("wsid = ? AND year = ? AND month = ? AND day = ?",
         day.wsid, day.year, day.month, day.day)
@@ -92,7 +92,7 @@ class TemperatureActor(sc: SparkContext, cassandraConfig: CassandraConfig)
     sc.parallelize(Seq(e)).saveToCassandra(keyspace, dailytable)
 
   /**
-   * Would only be handling handles 0-23 small items.
+   * Would only be handling 0-23 small items.
    * We do 'self ! data' to async persist the aggregated data
    * but still return it immediately to the requester, vs make client wait.
    *

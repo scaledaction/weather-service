@@ -5,16 +5,14 @@ import akka.actor.Props
 import akka.pattern.ask
 import akka.util.Timeout
 import com.datastax.killrweather.WeatherEvent._
-import com.datastax.killrweather.Weather.AnnualPrecipitation
+import com.datastax.killrweather.Weather.{AnnualPrecipitation, TopKPrecipitation}
 import scala.concurrent.duration._
 import org.apache.spark.SparkContext
 import spray.http.MediaTypes._
 import spray.http.StatusCodes._
 import spray.httpx.SprayJsonSupport._
 import spray.routing.HttpServiceActor
-import com.datastax.killrweather.Weather.WeatherAggregate
-import com.datastax.killrweather.Weather.NoDataAvailable
-import com.datastax.killrweather.Weather.DailyTemperature
+import com.datastax.killrweather.Weather._
 import com.datastax.killrweather.{ PrecipitationActor, TemperatureActor, WeatherStationActor }
 import com.scaledaction.core.cassandra.{ CassandraConfig, HasCassandraConfig }
 
@@ -44,16 +42,27 @@ class ClientService(sc: SparkContext) extends HttpServiceActor with HasCassandra
         onSuccess(getPrecipitation(precip)) {
           _.fold(complete(NotFound))(e => complete(OK, e))
         }
+      } ~
+      entity(as[GetTopKPrecipitation]) { precip =>
+        onSuccess(getTopKPrecipitation(precip)) {
+          _.fold(complete(NotFound))(e => complete(OK, e))
+        }
       }
     }
   }
+  
+  
+  
   //http://spray.io/documentation/1.2.3/spray-routing/key-concepts/rejections/#rejectionhandler
   //https://groups.google.com/forum/#!topic/spray-user/84mcHgOH4C4
   //https://github.com/spray/spray/wiki/Custom-Error-Responses
-  //http://tysonjh.com/blog/2014/05/05/spray-custom-404/  
+  //http://tysonjh.com/blog/2014/05/05/spray-custom-404/
+  
   def getPrecipitation(precip: GetPrecipitation) =
-    precipitation.ask(precip)
-      .mapTo[Option[AnnualPrecipitation]]
+    precipitation.ask(precip).mapTo[Option[AnnualPrecipitation]]
+  
+  def getTopKPrecipitation(precip: GetTopKPrecipitation) =
+    precipitation.ask(precip).mapTo[Option[TopKPrecipitation]] 
 
   val temperatureRoute = pathPrefix("weather" / "dailytemperature") {
     get {

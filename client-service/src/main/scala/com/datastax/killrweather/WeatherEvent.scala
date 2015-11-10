@@ -42,7 +42,9 @@ object WeatherEvent extends DefaultJsonProtocol {
   trait PrecipitationRequest extends WeatherRequest
   case class GetPrecipitation(wsid: String, year: Int) extends PrecipitationRequest
   case class GetTopKPrecipitation(wsid: String, year: Int, k: Int) extends PrecipitationRequest
+  
   implicit val GetPrecipitationFormat = jsonFormat2(GetPrecipitation)
+  implicit val GetTopKPrecipitationFormat = jsonFormat3(GetTopKPrecipitation)
 
   trait TemperatureRequest extends WeatherRequest
   //TODO - get the following message to marshall a Day from the HTTP json
@@ -51,7 +53,6 @@ object WeatherEvent extends DefaultJsonProtocol {
   case class GetMonthlyHiLowTemperature(wsid: String, year: Int, month: Int) extends TemperatureRequest
   case class GetMonthlyTemperature(wsid: String, year: Int, month: Int) extends TemperatureRequest
   implicit val DayFormat = jsonFormat4(Day)
-  //implicit val GetDailyTemperatureFormat = jsonFormat1(GetDailyTemperature)
   implicit val GetDailyTemperatureFormat = jsonFormat4(GetDailyTemperature)
 
   sealed trait Task extends Serializable
