@@ -18,11 +18,11 @@ trait HttpServerApp extends HttpService with HasHttpServerConfig {
     "Route creation is not fully supported before `startServer` has been called, " +
       "maybe you can turn your route definition into a `def` ?")
 
-  def startServer(route: ⇒ Route)(implicit system: ActorSystem): Unit = {
+  def startServer(route: => Route)(implicit system: ActorSystem): Unit = {
     startServer(getHttpServerConfig, route)(system)
   }
 
-  def startServer(httpConfig: HttpServerConfig, route: ⇒ Route)(implicit system: ActorSystem): Unit = {
+  def startServer(httpConfig: HttpServerConfig, route: => Route)(implicit system: ActorSystem): Unit = {
 
     val serviceActorName = "service-actor"
 
