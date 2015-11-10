@@ -17,20 +17,41 @@ object ClientServiceApp extends HttpServerApp with HasCassandraConfig with Loggi
     //TODO - convert to using a plain SparkContext 
     // 1. if SparkContext can be used with Spark SQL
     // 2. by placing sc.stop() in an onTermination block
-    val ssc = getActiveOrCreateStreamingContext(cassandraConfig)
+    //val ssc = getActiveOrCreateStreamingContext(cassandraConfig)
+    val sc = getActiveOrCreateSparkContext(cassandraConfig)
 
     implicit val system = ActorSystem("client-service")
 
-    val precipitation = system.actorOf(Props(new PrecipitationActor(ssc, cassandraConfig)), "precipitation")
-    val temperature = system.actorOf(Props(new TemperatureActor(ssc.sparkContext, cassandraConfig)), "temperature")
-    val weatherStation = system.actorOf(Props(new WeatherStationActor(ssc.sparkContext, cassandraConfig)), "weather-station")
+    val precipitation = system.actorOf(Props(new PrecipitationActor(sc, cassandraConfig)), "precipitation")
+    val temperature = system.actorOf(Props(new TemperatureActor(sc, cassandraConfig)), "temperature")
+    val weatherStation = system.actorOf(Props(new WeatherStationActor(sc, cassandraConfig)), "weather-station")
 
     val service = system.actorOf(Props(new ClientService(precipitation, temperature, weatherStation)), "client-service")
 
     startServer(service)
 
-    ssc.start()
-    ssc.awaitTermination()
+    //TODO - switch to SparkContext and add shutdown hook
+    //ssc.start()
+    //ssc.awaitTermination()
+
+    //TODO - Is this already a method or built into SparkContext?
+    sys addShutdownHook {
+      println("Shutdown hook caught.")
+      sc.stop
+      println("Done shutting down.")
+    }
+  }
+
+  //TODO - Create a com.scaledaction.core.spark.SparkUtils object for the following method
+  def getActiveOrCreateSparkContext(cassandraConfig: CassandraConfig): SparkContext = {
+
+    //TODO - Need to add SparkConfig and replace the hard-coded "setMaster" value
+    val conf = new SparkConf()
+      .set("spark.cassandra.connection.host", cassandraConfig.seednodes)
+      .setMaster("local[3]")
+      .setAppName("WeatherServiceClientService")
+
+    SparkContext.getOrCreate(conf)
   }
 
   //TODO - Create a com.scaledaction.core.spark.SparkUtils object for the following method

@@ -85,19 +85,19 @@ object Weather extends DefaultJsonProtocol {
 
   case class Day(wsid: String, year: Int, month: Int, day: Int) extends WeatherAggregate
 
-  object Day {
-    def apply(d: RawWeatherData): Day =
-      Day(d.wsid, d.year, d.month, d.day)
-
-    def apply(wsid: String, utcTimestamp: DateTime): Day =
-      Day(wsid, utcTimestamp.getYear, utcTimestamp.getMonthOfYear, utcTimestamp.getDayOfMonth)
-
-    /** Tech debt */
-    def apply(line: String): Day = {
-      val array = line.split(",")
-      Day(wsid = array(0), year = array(1).toInt, month = array(2).toInt, day = array(3).toInt)
-    }
-  }
+//  object Day {
+//    def apply(d: RawWeatherData): Day =
+//      Day(d.wsid, d.year, d.month, d.day)
+//
+//    def apply(wsid: String, utcTimestamp: DateTime): Day =
+//      Day(wsid, utcTimestamp.getYear, utcTimestamp.getMonthOfYear, utcTimestamp.getDayOfMonth)
+//
+//    /** Tech debt */
+//    def apply(line: String): Day = {
+//      val array = line.split(",")
+//      Day(wsid = array(0), year = array(1).toInt, month = array(2).toInt, day = array(3).toInt)
+//    }
+//  }
 
   case class NoDataAvailable(wsid: String, year: Int, query: Class[_ <: WeatherAggregate]) extends WeatherAggregate
 
@@ -136,6 +136,7 @@ object Weather extends DefaultJsonProtocol {
                               mean: Double,
                               variance: Double,
                               stdev: Double) extends Temperature
+  implicit val DailyTemperatureFormat = jsonFormat9(DailyTemperature)
 
   case class MonthlyTemperature(wsid: String,
                          year: Int,

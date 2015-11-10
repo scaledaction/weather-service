@@ -46,7 +46,8 @@ class TemperatureActor(sc: SparkContext, cassandraConfig: CassandraConfig)
   val rawtable = "raw_weather_data"
 
   def receive: Actor.Receive = {
-    case e: GetDailyTemperature => daily(e.day, sender)
+    //case e: GetDailyTemperature => daily(e.day, sender)
+    case e: GetDailyTemperature => daily(Day(e.wsid, e.year, e.month, e.day), sender)
     case e: DailyTemperature => store(e)
     case e: GetMonthlyHiLowTemperature => highLow(e, sender)
   }
@@ -64,12 +65,14 @@ class TemperatureActor(sc: SparkContext, cassandraConfig: CassandraConfig)
    * we look for historic data for hours 0-23 that may or may not already exist yet
    * and create stats on does exist at the time of request.
    */
-  def daily(day: Day, requester: ActorRef): Unit =
+  def daily(day: Day, requester: ActorRef): Unit = {
+    println("daily()")
     sc.cassandraTable[Double](keyspace, rawtable)
       .select("temperature").where("wsid = ? AND year = ? AND month = ? AND day = ?",
         day.wsid, day.year, day.month, day.day)
       .collectAsync()
       .map(toDaily(_, day)) pipeTo requester
+  }
 
   /**
    * Computes and sends the monthly aggregation to the `requester` actor.

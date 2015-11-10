@@ -10,6 +10,9 @@ import spray.http.MediaTypes._
 import spray.http.StatusCodes._
 import spray.httpx.SprayJsonSupport._
 import spray.routing.HttpServiceActor
+import com.datastax.killrweather.Weather.WeatherAggregate
+import com.datastax.killrweather.Weather.NoDataAvailable
+import com.datastax.killrweather.Weather.DailyTemperature
 
 //class RestApi(timeout: Timeout) extends HttpServiceActor
 //    with RestRoutes {
@@ -32,87 +35,53 @@ class ClientService(precipitation: ActorRef, temperature: ActorRef, weatherStati
 
   def receive = runRoute(route)
 
-  val route = precipitationRoute
   //TODO - Route me
-  //val route = precipitationRoute ~ temperatureRoute ~ weatherStationRoute
+  //def route = precipitationRoute ~ temperatureRoute ~ weatherStationRoute
+  def route = precipitationRoute ~ temperatureRoute
 
-  val precipitationRoute =
-    pathPrefix("weather" / Segment) { event =>
-      //pathEndOrSingleSlash {
-      get {
-        // POST /events/:event
-        entity(as[GetPrecipitation]) { precip =>
-          onSuccess(getPrecipitation(precip)) {
-            _.fold(complete(NotFound))(e => complete(OK, e))
-          }
+  val precipitationRoute = pathPrefix("weather" / "precipitation") {
+    get {
+      entity(as[GetPrecipitation]) { precip =>
+        onSuccess(getPrecipitation(precip)) {
+          _.fold(complete(NotFound))(e => complete(OK, e))
         }
-        //}
-        //        ~
-        //          get {
-        //            // GET /events/:event
-        //            onSuccess(getEvent(event)) {
-        //              _.fold(complete(NotFound))(e => complete(OK, e))
-        //            }
-        //          } ~
-        //          delete {
-        //            // DELETE /events/:event
-        //            onSuccess(cancelEvent(event)) {
-        //              _.fold(complete(NotFound))(e => complete(OK, e))
-        //            }
-        //          }
       }
     }
+  }
+  //http://spray.io/documentation/1.2.3/spray-routing/key-concepts/rejections/#rejectionhandler
+  //https://groups.google.com/forum/#!topic/spray-user/84mcHgOH4C4
+  //https://github.com/spray/spray/wiki/Custom-Error-Responses
+  //http://tysonjh.com/blog/2014/05/05/spray-custom-404/  
+  def getPrecipitation(precip: GetPrecipitation) =
+    precipitation.ask(precip)
+      .mapTo[Option[AnnualPrecipitation]]
+
+  val temperatureRoute = pathPrefix("weather" / "dailytemperature") {
+    get {
+      entity(as[GetDailyTemperature]) { temperature =>
+        onSuccess(getDailyTemperature(temperature)) {
+          res =>
+            res match {
+              case nda: NoDataAvailable => complete(NotFound)
+              case t: DailyTemperature => complete(OK, t)
+            }
+        }
+      }
+    }
+  }
+  //http://spray.io/documentation/1.2.3/spray-routing/key-concepts/rejections/#rejectionhandler
+  //https://groups.google.com/forum/#!topic/spray-user/84mcHgOH4C4
+  //https://github.com/spray/spray/wiki/Custom-Error-Responses
+  //http://tysonjh.com/blog/2014/05/05/spray-custom-404/  
+  def getDailyTemperature(temp: GetDailyTemperature) =
+    temperature.ask(temp)
+      .mapTo[WeatherAggregate]
 
   def stringToDuration(t: String): Timeout = {
     val d = Duration(t)
     FiniteDuration(d.length, d.unit)
   }
-
-  def getPrecipitation(precip: GetPrecipitation) =
-    precipitation.ask(precip)
-      .mapTo[Option[AnnualPrecipitation]]
 }
-
-// Client Service REST API:
-//
-//github/killrweather/killrweather/data/load/ny-sf-2008.csv.gz
-//725030:14732,2008,01,01,00,5.0,-3.9,1020.4,270,4.6,2,0.0,0.0
-//725030:14732,2008,01,01,01,5.0,-3.3,1020.6,290,4.1,2,0.0,0.0
-//725030:14732,2008,01,01,02,5.0,-3.3,1020.0,310,3.1,2,0.0,0.0
-//725030:14732,2008,01,01,03,4.4,-2.8,1020.1,300,1.5,2,0.0,0.0
-//725030:14732,2008,01,01,04,3.3,-4.4,1020.5,240,2.6,0,0.0,0.0
-//725030:14732,2008,01,01,05,0.0,999.9,0.0,0,0.0,0,0.0,0.0
-//725030:14732,2008,01,01,06,3.3,-2.8,1020.5,210,2.1,0,0.0,0.0
-//725030:14732,2008,01,01,07,1.7,-2.8,1019.6,120,3.1,0,0.0,0.0
-//725030:14732,2008,01,01,08,2.8,-2.2,1019.7,120,2.6,0,0.0,0.0
-//725030:14732,2008,01,01,09,2.2,-2.8,1019.3,100,1.5,0,0.0,0.0
-//
-//PrecipitationActor
-//  def receive : Actor.Receive = {
-//    case GetPrecipitation(wsid, year)        => cumulative(wsid, year, sender)
-//    case GetTopKPrecipitation(wsid, year, k) => topK(wsid, year, k, sender)
-//  }
-//
-//TemperatureActor
-//  def receive: Actor.Receive = {
-//    case e: GetDailyTemperature        => daily(e.day, sender)
-// This doesn't come directly from HTTP Request:    case e: DailyTemperature           => store(e)
-//    case e: GetMonthlyHiLowTemperature => highLow(e, sender)
-//  }
-//
-//WeatherStationActor
-//  def receive : Actor.Receive = {
-//    case GetCurrentWeather(wsid, dt) => current(wsid, dt, sender)
-//    case GetWeatherStation(wsid)     => weatherStation(wsid, sender)
-//  }
-//
-//  def queries(): Unit = {
-//
-//    val previous = (day: Day) => {
-//      val key = day.wsid.split(":")(0)
-//      queried.exists(_.month > day.month)
-//      // run more queries than queried.exists(_.wsid.startsWith(key)) until more wsid data
-//    }
 //
 //    val toSample = (source: Sources.FileSource) => source.days.filterNot(previous).headOption
 //

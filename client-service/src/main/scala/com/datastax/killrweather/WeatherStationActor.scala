@@ -52,11 +52,11 @@ class WeatherStationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
    * based on UTC time, to the `requester`.
    */
   def current(wsid: String, dt: Option[DateTime], requester: ActorRef): Unit = {
-    val day = Day(wsid, dt getOrElse timestamp)
-    sc.cassandraTable[RawWeatherData](keyspace, rawtable)
-      .where("wsid = ? AND year = ? AND month = ? AND day = ?",
-        wsid, day.year, day.month, day.day)
-      .collectAsync.map(_.headOption) pipeTo requester
+//    val day = Day(wsid, dt getOrElse timestamp)
+//    sc.cassandraTable[RawWeatherData](keyspace, rawtable)
+//      .where("wsid = ? AND year = ? AND month = ? AND day = ?",
+//        wsid, day.year, day.month, day.day)
+//      .collectAsync.map(_.headOption) pipeTo requester
   }
 
   /**
