@@ -67,5 +67,6 @@ class WeatherStationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
   def weatherStation(wsid: String, requester: ActorRef): Unit =
     sc.cassandraTable[Weather.WeatherStation](keyspace, weatherstations)
       .where("id = ?", wsid)
-      .collectAsync.map(_.headOption) pipeTo requester
+      .collectAsync
+      .map(_.headOption) pipeTo requester
 }

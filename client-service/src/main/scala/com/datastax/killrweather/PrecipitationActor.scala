@@ -56,7 +56,7 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
             .select("precipitation")
             .where("wsid = ? AND year = ?", wsid, year)
             .collectAsync()
-            .map(x => x match {
+            .map(seq => seq match {
                 case Nil => 
                     println("---->PrecipitationActor.cumulative case Nil => None")
                     None
