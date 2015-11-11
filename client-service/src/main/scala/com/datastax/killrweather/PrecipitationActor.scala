@@ -50,21 +50,14 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
      * Computes and sends the annual aggregation to the `requester` actor.
      * Precipitation values are 1 hour deltas from the previous.
      */
-    def cumulative(wsid: String, year: Int, requester: ActorRef): Unit = {
-        println("---->PrecipitationActor.cumulative")
-        val results = sc.cassandraTable[Double](keyspace, dailytable)
-            .select("precipitation")
-            .where("wsid = ? AND year = ?", wsid, year)
-            .collectAsync()
-            .map(seq => seq match {
-                case Nil => 
-                    println("---->PrecipitationActor.cumulative case Nil => None")
-                    None
-                case aggregate => Some(AnnualPrecipitation(wsid, year, aggregate.sum))
-            })
-
-        results pipeTo requester
-    }
+    // RW: TODO: Need to store aggregated values.
+    def cumulative(wsid: String, year: Int, requester: ActorRef): Unit =
+      sc.cassandraTable[Double](keyspace, dailytable)
+      .select("precipitation")
+      .where("wsid = ? AND year = ?", wsid, year)
+      .collectAsync()
+      .map(aggregate => 
+          AnnualPrecipitation(wsid, year, aggregate.sum)) pipeTo requester
 
     /** Returns the k highest temps for any station in the `year`. */
     def topK(wsid: String, year: Int, k: Int, requester: ActorRef): Unit = {

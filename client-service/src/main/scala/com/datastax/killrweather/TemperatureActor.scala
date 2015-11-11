@@ -67,22 +67,23 @@ class TemperatureActor(sc: SparkContext, cassandraConfig: CassandraConfig)
      */
     private def daily(day: Day, requester: ActorRef): Unit =      
         sc.cassandraTable[DailyTemperature](keyspace, dailytable)
-            .where("wsid = ? AND year = ? AND month = ? AND day = ?",
-                day.wsid, day.year, day.month, day.day)
-            .collectAsync
-            .map(seqDT => seqDT.headOption match {
-                case None => aggregateDaily(day, requester)
-                case Some(dailyTemperature) => requester ! dailyTemperature
-            })
+        .where("wsid = ? AND year = ? AND month = ? AND day = ?",
+            day.wsid, day.year, day.month, day.day)
+        .collectAsync
+        .map(seqDT => seqDT.headOption match {
+            case None => aggregateDaily(day, requester)
+            case Some(dailyTemperature) => requester ! dailyTemperature
+        })
     
-    private def aggregateDaily(day: Day, requester: ActorRef): Unit =        
-        sc.cassandraTable[Double](keyspace, rawtable)
+    private def aggregateDaily(day: Day, requester: ActorRef): Unit = {      
+        val NIX_diagnostic = sc.cassandraTable[Double](keyspace, rawtable)
         .select("temperature").where(
             "wsid = ? AND year = ? AND month = ? AND day = ?",
             day.wsid, day.year, day.month, day.day
         )
         .collectAsync()
         .map(toDaily(_, day)) pipeTo requester
+    }
 
     /**
      * Computes and sends the monthly aggregation to the `requester` actor.
@@ -114,7 +115,8 @@ class TemperatureActor(sc: SparkContext, cassandraConfig: CassandraConfig)
             val data = toDailyTemperature(key, StatCounter(aggregate))
             self ! data
             data
-        } else NoDataAvailable(key.wsid, key.year, classOf[DailyTemperature]) // not wanting to return an option to requester
+        } else NoDataAvailable(key.wsid, key.year, classOf[DailyTemperature]) 
+        // not wanting to return an option to requester
 
     private def toMonthly(aggregate: Seq[DailyTemperature], wsid: String, year: Int, month: Int): WeatherAggregate =
         if (aggregate.nonEmpty)

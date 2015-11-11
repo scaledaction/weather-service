@@ -20,69 +20,71 @@ import com.scaledaction.core.cassandra.{ CassandraConfig, HasCassandraConfig }
 
 class ClientService(sc: SparkContext) extends HttpServiceActor with HasCassandraConfig {
 
-  implicit val timeout = stringToDuration("20 s")
-  implicit def executionContext = context.dispatcher
-  
-  val cassandraConfig = getCassandraConfig
-  
-  // Children supervised by ClientService
-  val precipitation = context.actorOf(Props(new PrecipitationActor(sc, cassandraConfig)), "precipitation")
-  val temperature = context.actorOf(Props(new TemperatureActor(sc, cassandraConfig)), "temperature")
-  val weatherStation = context.actorOf(Props(new WeatherStationActor(sc, cassandraConfig)), "weather-station")
+    implicit val timeout = stringToDuration("20 s")
+    implicit def executionContext = context.dispatcher
+    
+    val cassandraConfig = getCassandraConfig
+    
+    // Children supervised by ClientService
+    val precipitation = context.actorOf(Props(new PrecipitationActor(sc, cassandraConfig)), "precipitation")
+    val temperature = context.actorOf(Props(new TemperatureActor(sc, cassandraConfig)), "temperature")
+    val weatherStation = context.actorOf(Props(new WeatherStationActor(sc, cassandraConfig)), "weather-station")
 
-  def receive = runRoute(route)
+    def receive = runRoute(route)
 
-  //TODO - Route me
-  //def route = precipitationRoute ~ temperatureRoute ~ weatherStationRoute
-  def route = precipitationRoute ~ temperatureRoute
+    //TODO - Route me
+    //def route = precipitationRoute ~ temperatureRoute ~ weatherStationRoute
+    def route = precipitationRoute ~ temperatureRoute
 
-  val precipitationRoute = pathPrefix("weather" / "precipitation") {
-    get {
-      entity(as[GetPrecipitation]) { precip =>
-        onSuccess(getPrecipitation(precip)) {
-          _.fold(complete(NotFound))(e => complete(OK, e))
+    val precipitationRoute = pathPrefix("weather" / "precipitation") {
+        get {
+            entity(as[GetPrecipitation]) { precip =>
+                onSuccess(getPrecipitation(precip)) {
+                    aggregate => aggregate match {
+                        case nda: NoDataAvailable => complete(NotFound)
+                        case p: AnnualPrecipitation => complete(OK, p)
+                    }
+                }
+            } /*~
+            entity(as[GetTopKPrecipitation]) { precip =>
+                onSuccess(getTopKPrecipitation(precip)) {
+                    //_.fold(complete(NotFound))(e => complete(OK, e))
+                }
+            }*/
         }
-      } ~
-      entity(as[GetTopKPrecipitation]) { precip =>
-        onSuccess(getTopKPrecipitation(precip)) {
-          _.fold(complete(NotFound))(e => complete(OK, e))
-        }
-      }
     }
-  }
-  
-  
-  
-  //http://spray.io/documentation/1.2.3/spray-routing/key-concepts/rejections/#rejectionhandler
-  //https://groups.google.com/forum/#!topic/spray-user/84mcHgOH4C4
-  //https://github.com/spray/spray/wiki/Custom-Error-Responses
-  //http://tysonjh.com/blog/2014/05/05/spray-custom-404/
-  
-  def getPrecipitation(precip: GetPrecipitation) =
-    precipitation.ask(precip).mapTo[Option[AnnualPrecipitation]]
-  
-  def getTopKPrecipitation(precip: GetTopKPrecipitation) =
-    precipitation.ask(precip).mapTo[Option[TopKPrecipitation]] 
-
-  val temperatureRoute = pathPrefix("weather" / "dailytemperature") {
-    get {
-      entity(as[GetDailyTemperature]) { temperature =>
-        onSuccess(getDailyTemperature(temperature)) {
-          res =>
-            res match {
-              case nda: NoDataAvailable => complete(NotFound)
-              case t: DailyTemperature => complete(OK, t)
+    
+    val temperatureRoute = pathPrefix("weather" / "dailytemperature") {
+        get {
+            entity(as[GetDailyTemperature]) { temperature =>
+                onSuccess(getDailyTemperature(temperature)) {
+                    aggregate => aggregate match {
+                        case nda: NoDataAvailable => complete(NotFound)
+                        case t: DailyTemperature => complete(OK, t)
+                    }
+                }
+                //onFailure(magnet) TODO ?
             }
         }
-      }
     }
-  }
-  //http://spray.io/documentation/1.2.3/spray-routing/key-concepts/rejections/#rejectionhandler
-  //https://groups.google.com/forum/#!topic/spray-user/84mcHgOH4C4
-  //https://github.com/spray/spray/wiki/Custom-Error-Responses
-  //http://tysonjh.com/blog/2014/05/05/spray-custom-404/  
-  def getDailyTemperature(temp: GetDailyTemperature) =
-    temperature.ask(temp).mapTo[WeatherAggregate]
+        
+    //http://spray.io/documentation/1.2.3/spray-routing/key-concepts/rejections/#rejectionhandler
+    //https://groups.google.com/forum/#!topic/spray-user/84mcHgOH4C4
+    //https://github.com/spray/spray/wiki/Custom-Error-Responses
+    //http://tysonjh.com/blog/2014/05/05/spray-custom-404/
+    
+    def getPrecipitation(precip: GetPrecipitation) =
+        precipitation.ask(precip).mapTo[WeatherAggregate]
+    
+    def getTopKPrecipitation(precip: GetTopKPrecipitation) =
+        precipitation.ask(precip).mapTo[WeatherAggregate] 
+
+    //http://spray.io/documentation/1.2.3/spray-routing/key-concepts/rejections/#rejectionhandler
+    //https://groups.google.com/forum/#!topic/spray-user/84mcHgOH4C4
+    //https://github.com/spray/spray/wiki/Custom-Error-Responses
+    //http://tysonjh.com/blog/2014/05/05/spray-custom-404/    
+    def getDailyTemperature(temp: GetDailyTemperature) =
+        temperature.ask(temp).mapTo[WeatherAggregate]
 }
 //
 //    val toSample = (source: Sources.FileSource) => source.days.filterNot(previous).headOption
