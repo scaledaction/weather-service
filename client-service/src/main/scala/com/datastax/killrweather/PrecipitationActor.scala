@@ -39,10 +39,12 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
     //    cassandra {
     //        table.daily.precipitation = "daily_aggregate_precip"
     //    }
-    val dailytable = "daily_aggregate_precip"
+    val dailyTable = "daily_aggregate_precip"
+    val yearlyTable = "year_cumulative_precip"
+    val rawTable = "raw_weather_data"
 
     def receive: Actor.Receive = {
-        case GetPrecipitation(wsid, year) => cumulative(wsid, year, sender)
+        case GetPrecipitation(wsid, year) => aggregateYear(wsid, year, sender)
         case GetTopKPrecipitation(wsid, year, k) => topK(wsid, year, k, sender)
     }
 
@@ -51,18 +53,28 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
      * Precipitation values are 1 hour deltas from the previous.
      */
     // RW: TODO: Need to store aggregated values.
-    def cumulative(wsid: String, year: Int, requester: ActorRef): Unit =
-      sc.cassandraTable[Double](keyspace, dailytable)
-      .select("precipitation")
+    def aggregateYear(wsid: String, year: Int, requester: ActorRef): Unit =
+      sc.cassandraTable[Double](keyspace, rawTable)
+      .select("one_hour_precip")
       .where("wsid = ? AND year = ?", wsid, year)
       .collectAsync()
-      .map(aggregate => 
-          AnnualPrecipitation(wsid, year, aggregate.sum)) pipeTo requester
+      .map(toYearlyCumulative(wsid, year, _)) pipeTo requester
+      
+    def toYearlyCumulative(
+        wsid: String, year: Int, aggregate: Seq[Double]
+    ): WeatherAggregate =
+        if (aggregate.nonEmpty)
+            AnnualPrecipitation(wsid, year, sc.parallelize(aggregate).sum)
+        else {
+            log.info("PrecipitationActor.toCumulative NoDataAvailable")
+            NoDataAvailable(wsid, year, classOf[DailyTemperature])
+            // not wanting to return an option to requester
+        }
 
     /** Returns the k highest temps for any station in the `year`. */
     def topK(wsid: String, year: Int, k: Int, requester: ActorRef): Unit = {
         println("---->PrecipitationActor.topK")
-        val results = sc.cassandraTable[Double](keyspace, dailytable)
+        val results = sc.cassandraTable[Double](keyspace, dailyTable)
             .select("precipitation")
             .where("wsid = ? AND year = ?", wsid, year)
             .collectAsync() // TODO - Try aggregate instead of collect
