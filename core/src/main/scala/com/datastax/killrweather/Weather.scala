@@ -112,7 +112,7 @@ object Weather extends DefaultJsonProtocol {
 
   case class AnnualPrecipitation(wsid: String,
                                  year: Int,
-                                 total: Double) extends Precipitation
+                                 precipitation: Double) extends Precipitation
                                  
   implicit val AnnualPrecipitationFormat = jsonFormat3(AnnualPrecipitation)
                                  

@@ -115,8 +115,10 @@ class TemperatureActor(sc: SparkContext, cassandraConfig: CassandraConfig)
             val data = toDailyTemperature(key, StatCounter(aggregate))
             self ! data
             data
-        } else NoDataAvailable(key.wsid, key.year, classOf[DailyTemperature]) 
-        // not wanting to return an option to requester
+        } else {
+            log.info("TemperatureActor.toDaily NoDataAvailable")
+            NoDataAvailable(key.wsid, key.year, classOf[DailyTemperature]) 
+        }
 
     private def toMonthly(aggregate: Seq[DailyTemperature], wsid: String, year: Int, month: Int): WeatherAggregate =
         if (aggregate.nonEmpty)

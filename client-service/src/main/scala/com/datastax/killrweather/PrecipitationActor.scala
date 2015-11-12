@@ -44,44 +44,47 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
     val rawTable = "raw_weather_data"
 
     def receive: Actor.Receive = {
-        case GetPrecipitation(wsid, year) => aggregateYear(wsid, year, sender)
-        case GetTopKPrecipitation(wsid, year, k) => topK(wsid, year, k, sender)
+        case e: GetPrecipitation => cummulative(e, sender)
+        case e: GetTopKPrecipitation => topK(e, sender)
     }
 
     /**
      * Computes and sends the annual aggregation to the `requester` actor.
      * Precipitation values are 1 hour deltas from the previous.
+     * TODO: This mechanism is not yet clear. The KW version simply sums the
+     * extant values in the daily_aggregate_precip table that are loaded
+     * during ingestion. But any involvement of the year_cumulative_precip
+     * is not apparent.
      */
-    // RW: TODO: Need to store aggregated values.
-    def aggregateYear(wsid: String, year: Int, requester: ActorRef): Unit =
-      sc.cassandraTable[Double](keyspace, rawTable)
-      .select("one_hour_precip")
-      .where("wsid = ? AND year = ?", wsid, year)
+    // TODO: Currently dependent on ingestion population of daily_aggregate_precip.
+    private def cummulative(e: GetPrecipitation, requester: ActorRef): Unit =
+      sc.cassandraTable[Double](keyspace, dailyTable)
+      .select("precipitation")
+      .where("wsid = ? AND year = ?", e.wsid, e.year)
       .collectAsync()
-      .map(toYearlyCumulative(wsid, year, _)) pipeTo requester
+      .map(toYearlyCumulative(e.wsid, e.year, _)) pipeTo requester
       
-    def toYearlyCumulative(
+    private def toYearlyCumulative(
         wsid: String, year: Int, aggregate: Seq[Double]
     ): WeatherAggregate =
-        if (aggregate.nonEmpty)
+        if (aggregate.nonEmpty) {
             AnnualPrecipitation(wsid, year, sc.parallelize(aggregate).sum)
-        else {
+        } else {
             log.info("PrecipitationActor.toCumulative NoDataAvailable")
             NoDataAvailable(wsid, year, classOf[DailyTemperature])
-            // not wanting to return an option to requester
         }
 
     /** Returns the k highest temps for any station in the `year`. */
-    def topK(wsid: String, year: Int, k: Int, requester: ActorRef): Unit = {
+    private def topK(e: GetTopKPrecipitation, requester: ActorRef): Unit = {
         println("---->PrecipitationActor.topK")
-        val results = sc.cassandraTable[Double](keyspace, dailyTable)
+        val results = sc.cassandraTable[Double](keyspace, dailyTable) 
             .select("precipitation")
-            .where("wsid = ? AND year = ?", wsid, year)
+            .where("wsid = ? AND year = ?", e.wsid, e.year)
             .collectAsync() // TODO - Try aggregate instead of collect
             .map(x => x match {
                 case Nil => None
                 case aggregate => Some(TopKPrecipitation(
-                    wsid, year, sc.parallelize(aggregate).top(k).toSeq))
+                    e.wsid, e.year, sc.parallelize(aggregate).top(e.k).toSeq))
             })
         results pipeTo requester
     }

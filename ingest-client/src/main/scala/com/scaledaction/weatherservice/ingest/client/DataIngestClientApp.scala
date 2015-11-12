@@ -28,6 +28,7 @@ object DataIngestClientApp extends App {
     log.info("Loading raw weather data from file and posting as individual Json records to WeatherService ingest-api.")
     
     val config = ConfigFactory.load
+    
     Try(config.getString("weatherservice.data.load.path")) match {
         case Success(filePath) =>
             Try(config.getString("weatherservice.data.target.url")) match {
