@@ -13,6 +13,7 @@ class DataIngestApi(val receiver: ActorRef) extends Directives {
   val route = post {
     path("weather" / "data" / "json") {
       handleWith { rawRecord: RawWeatherData =>
+        println("===> rawRecord: " + rawRecord)
         receiver ! rawRecord
         rawRecord
       }

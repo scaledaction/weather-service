@@ -17,10 +17,9 @@ import com.typesafe.config.{ Config, ConfigFactory }
 import spray.util._
 
 import com.datastax.killrweather.Weather._
-import ClientHelper._
 
-object DataIngestClientApp extends App {
-    
+object DataIngestClientApp extends App with ClientHelper {
+        
     implicit val system = ActorSystem("DataIngestClientApp")
     import system.dispatcher // execution context for futures
     val log = Logging(system, getClass)
@@ -29,7 +28,21 @@ object DataIngestClientApp extends App {
     
     val config = ConfigFactory.load
     
-    Try(config.getString("weatherservice.data.load.path")) match {
+    val targetUrl = config.getString("weatherservice.data.target.url")
+    
+    for {
+        fs <- ingestData
+        record <- fs.data
+    } {
+        val splitValues = Try(record.split(","))
+            splitValues match {
+                case Success(values) => postJson(values, targetUrl)
+                case Failure(f) => 
+                    log.info("csvFileToJsonIngest split error: " + f)
+            }
+    }
+    
+    /*Try(config.getString("weatherservice.data.load.path")) match {
         case Success(filePath) =>
             Try(config.getString("weatherservice.data.target.url")) match {
                 case Success(targetUrl) =>
@@ -41,9 +54,9 @@ object DataIngestClientApp extends App {
         case Failure(f) => 
             log.error("Failed to get data file path: " + f)
             shutdown()
-    }
+    }*/
     
-    private def csvFileToJsonIngest(filePath: String, targetUrl: String) = {
+    /*private def csvFileToJsonIngest(filePath: String, targetUrl: String) = {
         log.info("csvFileToJsonIngest, filePath: " + filePath + 
                  " targetUrl: " + targetUrl)
                          
@@ -64,7 +77,7 @@ object DataIngestClientApp extends App {
         Thread.sleep(120000) // TODO: This is a one-time finite data load operation bound to starting the app and should close for convenience.
         log.info("Ingestion operation completed, calling shutdown.")
         shutdown() // We are through.
-    }
+    }*/
 
     private def postJson(attr: Array[String], targetUrl: String) {
         val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
