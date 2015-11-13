@@ -15,11 +15,11 @@
  */
 package com.scaledaction.core.kafka
 
-import scala.util.Try
+import com.scaledaction.core.config.{ AppConfig, HasAppConfig }
 import com.typesafe.config.Config
 import java.util.Properties
 import org.apache.kafka.clients.producer.ProducerConfig
-import com.scaledaction.core.config.{ AppConfig, HasAppConfig }
+import scala.util.Try
 
 /**
  * Application settings. First attempts to acquire from the deploy environment.
@@ -57,6 +57,10 @@ class KafkaConfig(
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, valueSerializer)
     props
   }
+
+  val kafkaParams = Map[String, String]("metadata.broker.list" -> brokers)
+
+  val topics = topic.split(",").toSet
 
   override def toString(): String = s"brokers: ${brokers}, topic: ${topic}, keySerializer: ${keySerializer}, valueSerializer: ${valueSerializer}"
 }

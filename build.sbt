@@ -29,6 +29,7 @@ lazy val ingest_client = (project in file("ingest-client"))
   .settings(libraryDependencies ++= ingest_client_deps)
 
 lazy val ingest_backend = (project in file("ingest-backend"))
+                       .dependsOn(core)
                        .settings(name := s"${modulePrefix}-ingest-backend")
                        .settings(globalSettings:_*)
                        .settings(libraryDependencies ++= ingest_backend_deps)
@@ -49,6 +50,7 @@ lazy val coreDeps = Seq(
   "io.spray"               %% "spray-json"            % "1.3.2",
   "com.datastax.spark"     % "spark-cassandra-connector_2.10" % sparkCassandraConnectorVersion,
   "org.apache.spark"       %% "spark-sql"             % sparkVersion, //% "provided",
+  "org.apache.spark"       %% "spark-streaming"       % sparkVersion, //% "provided",
   "org.specs2"             %% "specs2"                % "2.2.2"        % "test",
   "io.spray"               %% "spray-testkit"         % sprayVersion   % "test",
   "com.typesafe.akka"      %% "akka-testkit"          % akkaVersion    % "test",
