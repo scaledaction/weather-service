@@ -3,9 +3,10 @@
   "cmd": "java -cp weatherservice-client-service-assembly-1.0.jar com.scaledaction.weatherservice.client.service.ClientServiceApp",
   "env":{
     "HTTP_HOST":"demo.marathon.mesos",
-    "HTTP_PORT":"8080"
-    "CASSANDRA_SEED_NODES":"cassandra-dcos-node.cassandra.dcos.mesos"
-    "CASSANDRA_KEYSPACE":"isd_weather_data"
+    "HTTP_PORT":"8080",
+    "CASSANDRA_SEED_NODES":"cassandra-dcos-node.cassandra.dcos.mesos",
+    "CASSANDRA_KEYSPACE":"isd_weather_data",
+    "SPARK_MASTER":"mesos://dcos.mesos:5050"
   },
   "instances": 1,
   "cpus": 1.0,

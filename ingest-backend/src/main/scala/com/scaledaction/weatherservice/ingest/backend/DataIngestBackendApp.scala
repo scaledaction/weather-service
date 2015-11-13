@@ -2,7 +2,7 @@ package com.scaledaction.weatherservice.ingest.backend
 
 import com.scaledaction.core.cassandra.HasCassandraConfig
 import com.scaledaction.core.kafka.HasKafkaConfig
-import com.scaledaction.core.spark.SparkUtils
+import com.scaledaction.core.spark.{ SparkUtils, HasSparkConfig }
 import com.datastax.killrweather.Weather.RawWeatherData
 import com.datastax.spark.connector.streaming._
 import kafka.serializer.StringDecoder
@@ -11,7 +11,7 @@ import org.apache.spark.streaming.kafka.KafkaUtils
 
 // github/mesosphere/iot-demo/streaming/src/main/scala/com/bythebay/pipeline/spark/streaming/StreamingRatings.scala
 // github/scaledaction/killrweather/killrweather-app/src/main/scala/com/datastax/killrweather/KafkaStreamingActor.scala
-object DataIngestBackendApp extends App with HasCassandraConfig with HasKafkaConfig with Logging {
+object DataIngestBackendApp extends App with HasCassandraConfig with HasKafkaConfig with HasSparkConfig with Logging {
 
   //TODO - Add application config - and replace the following hard-coded Cassandra table name values
   val CassandraTableRaw = "raw_weather_data" //"cassandra.table.raw"
@@ -21,8 +21,10 @@ object DataIngestBackendApp extends App with HasCassandraConfig with HasKafkaCon
 
   val kafkaConfig = getKafkaConfig
 
-  //TODO - Need to add SparkConfig and replace the hard-coded "sparkMaster" and "sparkAppName" value
-  val ssc = SparkUtils.getActiveOrCreateStreamingContext(cassandraConfig, "local[3]", "DataIngestBackend")
+  val sparkConfig = getSparkConfig
+
+  //TODO - Need to add ApplicationConfig and replace the hard-coded "sparkAppName" value with application.app-name
+  val ssc = SparkUtils.getActiveOrCreateStreamingContext(cassandraConfig, sparkConfig.master, "DataIngestBackend")
 
   //From KW
   //val kafkaStream = KafkaUtils.createStream[String, String, StringDecoder, StringDecoder](
