@@ -1,0 +1,15 @@
+{
+  "id": "ingest-backend",
+  "cmd": "java -cp weatherservice-client-service-assembly-1.0.jar com.scaledaction.weatherservice.ingest.backend.DataIngestBackendApp",
+  "env":{
+    "CASSANDRA_SEED_NODES":"cassandra-dcos-node.cassandra.dcos.mesos",
+    "CASSANDRA_KEYSPACE":"isd_weather_data",
+    "SPARK_MASTER":"mesos://dcos.mesos:5050",
+    "KAFKA_BROKERS":"broker-0.kafka.mesos:1025,broker-1.kafka.mesos:1025,broker-2.kafka.mesos:1025"
+  },
+  "instances": 1,
+  "cpus": 1.0,
+  "mem": 1024,
+  "uris": ["https://s3.amazonaws.com/scaledactionben/lib/weatherservice-ingest-backend-assembly-1.0.jar"]
+}
+
