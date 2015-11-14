@@ -53,10 +53,10 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
      * Precipitation values are 1 hour deltas from the previous.
      * TODO: This mechanism is not yet clear. The KW version simply sums the
      * extant values in the daily_aggregate_precip table that are loaded
-     * during ingestion. But any involvement of the year_cumulative_precip
-     * is not apparent.
+     * during ingestion (using the hourly counter update). But any involvement 
+     * of the year_cumulative_precip table is not apparent.
      */
-    // TODO: Currently dependent on ingestion population of daily_aggregate_precip.
+    // Dependent on population of daily_aggregate_precip via ingest-api.
     private def cummulative(e: GetPrecipitation, requester: ActorRef): Unit =
       sc.cassandraTable[Double](keyspace, dailyTable)
       .select("precipitation")
@@ -68,7 +68,12 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
         wsid: String, year: Int, aggregate: Seq[Double]
     ): WeatherAggregate =
         if (aggregate.nonEmpty) {
-            AnnualPrecipitation(wsid, year, sc.parallelize(aggregate).sum)
+            /* TODO: daily_aggregate_precip precipitation is a Cassandra 
+             * counter which only holds Int, so we multiply and divide by 
+             * 10. Values resolve to 1 decimal place. We are note attempting
+             * to batch or store in year_cumulative_precip table as the 
+             * lambda architecture pattern is not yet clear. */
+            AnnualPrecipitation(wsid, year, sc.parallelize(aggregate).sum / 10)
         } else {
             log.info("PrecipitationActor.toCumulative NoDataAvailable")
             NoDataAvailable(wsid, year, classOf[DailyTemperature])
