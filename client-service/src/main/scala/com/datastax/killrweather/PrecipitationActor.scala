@@ -46,7 +46,7 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
     def receive: Actor.Receive = {
         case e: GetPrecipitation => yearlyCummulative(e, sender)
         case e: GetTopKPrecipitation => yearlyTopK(e, sender)
-        case e: AnnualPrecipitation => storeAnnual(e)
+        case e: AnnualPrecipitation => storeAnnualPrecip(e)
     }
 
     private def yearlyCummulative(
@@ -69,10 +69,10 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
         .select("precipitation")
         .where("wsid = ? AND year = ?", e.wsid, e.year)
         .collectAsync() // TODO: use Spark aggregate function
-        .map(toYearly(e.wsid, e.year, _)) pipeTo requester
+        .map(yearlyCummulative(e.wsid, e.year, _)) pipeTo requester
     }
       
-    private def toYearly(
+    private def yearlyCummulative(
         wsid: String, year: Int, aggregate: Seq[Double]
     ): WeatherAggregate =
         if (aggregate.nonEmpty) {
@@ -84,21 +84,23 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
         else NoDataAvailable(wsid, year, classOf[AnnualPrecipitation])
 
     /** Returns the k highest temps for any station in the `year`. */
-    private def yearlyTopK(e: GetTopKPrecipitation, requester: ActorRef): Unit = {
+    private def yearlyTopK(
+        e: GetTopKPrecipitation, requester: ActorRef)
+    : Unit = {
         val results = sc.cassandraTable[Double](keyspace, dailyTable) 
             .select("precipitation")
             .where("wsid = ? AND year = ?", e.wsid, e.year)
             .collectAsync() // TODO - Try aggregate instead of collect
-            .map(x => x match {
+            .map(seqPrecip => seqPrecip match {
                 case Nil => 
                     NoDataAvailable(e.wsid, e.year, classOf[TopKPrecipitation])
-                case aggregate => 
+                case seqPrecip => 
                     TopKPrecipitation(
-                        e.wsid, e.year, sc.parallelize(aggregate).top(e.k).toSeq)
+                        e.wsid, e.year, sc.parallelize(seqPrecip).top(e.k).toSeq)
             })
         results pipeTo requester
     }
     
-    private def storeAnnual(e: AnnualPrecipitation): Unit =
+    private def storeAnnualPrecip(e: AnnualPrecipitation): Unit =
         sc.parallelize(Seq(e)).saveToCassandra(keyspace, yearlyTable)
 }

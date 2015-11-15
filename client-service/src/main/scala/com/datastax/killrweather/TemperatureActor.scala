@@ -80,7 +80,8 @@ class TemperatureActor(sc: SparkContext, cassandraConfig: CassandraConfig)
      * to the aggregateMonth method.
      */
     private def highLow(
-        e: GetMonthlyTemperature, requester: ActorRef): Unit = {
+        e: GetMonthlyTemperature, requester: ActorRef)
+    : Unit = {
         sc.cassandraTable[MonthlyTemperature](keyspace, monthlyTable)
         .where("wsid = ? AND year = ? AND month = ?",
             e.wsid, e.year, e.month)

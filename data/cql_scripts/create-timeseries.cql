@@ -92,6 +92,6 @@ CREATE TABLE daily_aggregate_precip (
 CREATE TABLE year_cumulative_precip (
    wsid text,
    year int,
-   precipitation counter,
+   precipitation double,
    PRIMARY KEY ((wsid), year)
 ) WITH CLUSTERING ORDER BY (year DESC);
