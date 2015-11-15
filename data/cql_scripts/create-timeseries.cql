@@ -11,7 +11,6 @@ use isd_weather_data;
 /*
 Weather stations that correspond with collected raw weather data.
 */
-
 CREATE TABLE weather_station (
     id text PRIMARY KEY,  // Composite of Air Force Datsav3 station number and NCDC WBAN number
     name text,            // Name of reporting station
@@ -27,7 +26,6 @@ CREATE TABLE weather_station (
 Raw weather readings from a single station, hourly.
 sky_condition_text text, // Non-coded sky conditions
 */
-
 CREATE TABLE raw_weather_data (
    wsid text,               // Composite of Air Force Datsav3 station number and NCDC WBAN number
    year int,                // Year collected
@@ -51,7 +49,6 @@ Quick access lookup table for sky_condition. Useful for potential analytics.
 Just in case you want to know what an okta is, here is the wikipedia page:
 http://en.wikipedia.org/wiki/Okta
 */
-
 CREATE TABLE sky_condition_lookup (
     code int PRIMARY KEY,
     condition text
@@ -69,6 +66,15 @@ CREATE TABLE daily_aggregate_temperature (
    stdev double,
    PRIMARY KEY ((wsid), year, month, day)
 ) WITH CLUSTERING ORDER BY (year DESC, month DESC, day DESC);
+
+CREATE TABLE monthly_aggregate_temperature (
+   wsid text,
+   year int,
+   month int,
+   high double,
+   low double,
+   PRIMARY KEY ((wsid), year, month)
+) WITH CLUSTERING ORDER BY (year DESC, month DESC);
 
 /*
   Sum of all one_hour_precip for one day and one weather station

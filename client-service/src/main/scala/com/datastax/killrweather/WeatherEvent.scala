@@ -50,10 +50,10 @@ object WeatherEvent extends DefaultJsonProtocol {
   //TODO - get the following message to marshall a Day from the HTTP json
   //case class GetDailyTemperature(day: Day) extends TemperatureRequest
   case class GetDailyTemperature(wsid: String, year: Int, month: Int, day: Int) extends TemperatureRequest  
-  case class GetMonthlyHiLowTemperature(wsid: String, year: Int, month: Int) extends TemperatureRequest
   case class GetMonthlyTemperature(wsid: String, year: Int, month: Int) extends TemperatureRequest
   implicit val DayFormat = jsonFormat4(Day)
   implicit val GetDailyTemperatureFormat = jsonFormat4(GetDailyTemperature)
+  implicit val GetMonthlyTemperatureFormat = jsonFormat3(GetMonthlyTemperature)
 
   sealed trait Task extends Serializable
   case object QueryTask extends Task

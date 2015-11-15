@@ -38,11 +38,11 @@ class ClientService(sc: SparkContext) extends HttpServiceActor with HasCassandra
 
     val precipitationRoute = pathPrefix("weather" / "precipitation") {
         get {
-            entity(as[GetPrecipitation]) { precip =>
-                onSuccess(getPrecipitation(precip)) {
+            entity(as[GetPrecipitation]) { e =>
+                onSuccess(getPrecipitation(e)) {
                     aggregate => aggregate match {
                         case nda: NoDataAvailable => complete(NotFound)
-                        case p: AnnualPrecipitation => complete(OK, p)
+                        case ap: AnnualPrecipitation => complete(OK, ap)
                     }
                 }
             } /*~
@@ -54,16 +54,24 @@ class ClientService(sc: SparkContext) extends HttpServiceActor with HasCassandra
         }
     }
     
-    val temperatureRoute = pathPrefix("weather" / "dailytemperature") {
+    val temperatureRoute = pathPrefix("weather" / "temperature") {
         get {
-            entity(as[GetDailyTemperature]) { temperature =>
-                onSuccess(getDailyTemperature(temperature)) {
+            entity(as[GetDailyTemperature]) { e =>
+                onSuccess(getDailyTemperature(e)) {
                     aggregate => aggregate match {
                         case nda: NoDataAvailable => complete(NotFound)
-                        case t: DailyTemperature => complete(OK, t)
+                        case dt: DailyTemperature => complete(OK, dt)
                     }
                 }
                 //onFailure(magnet) TODO ?
+            } ~
+            entity(as[GetMonthlyTemperature]) { e =>
+                onSuccess(getMonthlyTemperature(e)) {
+                    aggregate => aggregate match {
+                        case nda: NoDataAvailable => complete(NotFound)
+                        case mt: MonthlyTemperature => complete(OK, mt)
+                    }
+                }
             }
         }
     }
@@ -73,18 +81,22 @@ class ClientService(sc: SparkContext) extends HttpServiceActor with HasCassandra
     //https://github.com/spray/spray/wiki/Custom-Error-Responses
     //http://tysonjh.com/blog/2014/05/05/spray-custom-404/
     
-    def getPrecipitation(precip: GetPrecipitation) =
-        precipitation.ask(precip).mapTo[WeatherAggregate]
+    def getPrecipitation(e: GetPrecipitation) =
+        precipitation.ask(e).mapTo[WeatherAggregate]
     
-    def getTopKPrecipitation(precip: GetTopKPrecipitation) =
-        precipitation.ask(precip).mapTo[WeatherAggregate] 
+    def getTopKPrecipitation(e: GetTopKPrecipitation) =
+        precipitation.ask(e).mapTo[WeatherAggregate] 
 
     //http://spray.io/documentation/1.2.3/spray-routing/key-concepts/rejections/#rejectionhandler
     //https://groups.google.com/forum/#!topic/spray-user/84mcHgOH4C4
     //https://github.com/spray/spray/wiki/Custom-Error-Responses
-    //http://tysonjh.com/blog/2014/05/05/spray-custom-404/    
-    def getDailyTemperature(temp: GetDailyTemperature) =
-        temperature.ask(temp).mapTo[WeatherAggregate]
+    //http://tysonjh.com/blog/2014/05/05/spray-custom-404/ 
+    
+    def getDailyTemperature(e: GetDailyTemperature) =
+        temperature.ask(e).mapTo[WeatherAggregate]
+    
+    def getMonthlyTemperature(e: GetMonthlyTemperature) =
+        temperature.ask(e).mapTo[WeatherAggregate]
 }
 //
 //    val toSample = (source: Sources.FileSource) => source.days.filterNot(previous).headOption
@@ -98,7 +110,7 @@ class ClientService(sc: SparkContext) extends HttpServiceActor with HasCassandra
 //
 //      log.debug("Requesting annual precipitation for weather station {} in year {}", sample.wsid, sample.year)
 //      guardian ! GetPrecipitation(sample.wsid, sample.year)
-//
+// 
 //      log.debug("Requesting top-k Precipitation for weather station {}", sample.wsid)
 //      guardian ! GetTopKPrecipitation(sample.wsid, sample.year, k = 10)
 //

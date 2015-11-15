@@ -19,6 +19,21 @@ import org.joda.time.DateTime
 import spray.json.DefaultJsonProtocol
 
 object Weather extends DefaultJsonProtocol {
+    
+  val monthLength = scala.collection.immutable.Map[Int, Int] (
+      1 -> 31,
+      2 -> 28,
+      3 -> 31,
+      4 -> 30,
+      5 -> 31,
+      6 -> 30,
+      7 -> 31,
+      8 -> 31,
+      9 -> 30,
+      10 -> 31,
+      11 -> 30,
+      12 -> 31
+  )
 
   /** Base marker trait. */
   @SerialVersionUID(1L)
@@ -141,9 +156,9 @@ object Weather extends DefaultJsonProtocol {
   implicit val DailyTemperatureFormat = jsonFormat9(DailyTemperature)
 
   case class MonthlyTemperature(wsid: String,
-                         year: Int,
-                         month: Int,
-                         high: Double,
-                         low: Double) extends Temperature
-
+                                year: Int,
+                                month: Int,
+                                high: Double,
+                                low: Double) extends Temperature
+  implicit val MonthlyTemperatureFormat = jsonFormat5(MonthlyTemperature)
 }
