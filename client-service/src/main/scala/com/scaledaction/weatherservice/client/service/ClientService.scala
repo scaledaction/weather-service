@@ -45,12 +45,15 @@ class ClientService(sc: SparkContext) extends HttpServiceActor with HasCassandra
                         case ap: AnnualPrecipitation => complete(OK, ap)
                     }
                 }
-            } /*~
-            entity(as[GetTopKPrecipitation]) { precip =>
-                onSuccess(getTopKPrecipitation(precip)) {
-                    //_.fold(complete(NotFound))(e => complete(OK, e))
+            } ~
+            entity(as[GetTopKPrecipitation]) { e =>
+                onSuccess(getTopKPrecipitation(e)) {
+                    aggregate => aggregate match {
+                        case nda: NoDataAvailable => complete(NotFound)
+                        case ap: TopKPrecipitation => complete(OK, ap)
+                    }
                 }
-            }*/
+            }
         }
     }
     

@@ -44,46 +44,47 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
     val rawTable = "raw_weather_data"
 
     def receive: Actor.Receive = {
-        case e: GetPrecipitation => cummulative(e, sender)
-        case e: GetTopKPrecipitation => topK(e, sender)
+        case e: GetPrecipitation => yearlyCummulative(e, sender)
+        case e: GetTopKPrecipitation => yearlyTopK(e, sender)
+        case e: AnnualPrecipitation => storeAnnual(e)
     }
 
-    /**
-     * Computes and sends the annual aggregation to the `requester` actor.
-     * Precipitation values are 1 hour deltas from the previous.
-     * TODO: This mechanism is not yet clear. The KW version simply sums the
-     * extant values in the daily_aggregate_precip table that are loaded
-     * during ingestion (using the hourly counter update). But any involvement 
-     * of the year_cumulative_precip table is not apparent.
-     */
+    private def yearlyCummulative(
+        e: GetPrecipitation, requester: ActorRef): Unit = {
+        sc.cassandraTable[AnnualPrecipitation](keyspace, yearlyTable)
+        .where("wsid = ? AND year = ?", e.wsid, e.year)
+        .collectAsync // TODO: write custom sum that checks for no data
+        .map(seqAP => seqAP.headOption match {
+            case None => aggregateYearly(e, requester)
+            case Some(yearlyPrecip) => requester ! yearlyPrecip
+        })
+    }
+
     // TODO: Consider how to use //.sum() TODO See DoubleRDDFunctions //import org.apache.spark.SparkContext._
     // TODO: Dependent on population of daily_aggregate_precip via ingest-api.
-    private def cummulative(e: GetPrecipitation, requester: ActorRef): Unit = {
-      sc.cassandraTable[Double](keyspace, dailyTable)
-      .select("precipitation")
-      .where("wsid = ? AND year = ?", e.wsid, e.year)
-      .collectAsync() // TODO: use Spark aggregate function
-      .map(toYearlyCumulative(e.wsid, e.year, _)) pipeTo requester
+    private def aggregateYearly(
+        e: GetPrecipitation, requester: ActorRef
+    ): Unit = {
+        sc.cassandraTable[Double](keyspace, dailyTable)
+        .select("precipitation")
+        .where("wsid = ? AND year = ?", e.wsid, e.year)
+        .collectAsync() // TODO: use Spark aggregate function
+        .map(toYearly(e.wsid, e.year, _)) pipeTo requester
     }
       
-    private def toYearlyCumulative(
+    private def toYearly(
         wsid: String, year: Int, aggregate: Seq[Double]
     ): WeatherAggregate =
         if (aggregate.nonEmpty) {
-            /* TODO: daily_aggregate_precip precipitation is a Cassandra 
-             * counter which only holds Int, so we multiply and divide by 
-             * 10. Values resolve to 1 decimal place. We are note attempting
-             * to batch or store in year_cumulative_precip table as the 
-             * lambda architecture pattern is not yet clear. */
-            AnnualPrecipitation(wsid, year, sc.parallelize(aggregate).sum / 10)
-        } else {
-            log.info("PrecipitationActor.toCumulative NoDataAvailable")
-            NoDataAvailable(wsid, year, classOf[AnnualPrecipitation])
-        }
+            val data = AnnualPrecipitation(
+                wsid, year, sc.parallelize(aggregate).sum / 10) /* TODO: daily_aggregate_precip precipitation is a Cassandra counter which only holds Int, so we multiply and divide by 10. Values resolve to 1 decimal place. We are note attemptingto batch or store in year_cumulative_precip table as the lambda architecture pattern is not yet clear. */
+            if(timestamp.getYear > year) self ! data   
+            data
+        } 
+        else NoDataAvailable(wsid, year, classOf[AnnualPrecipitation])
 
     /** Returns the k highest temps for any station in the `year`. */
-    private def topK(e: GetTopKPrecipitation, requester: ActorRef): Unit = {
-        println("---->PrecipitationActor.topK")
+    private def yearlyTopK(e: GetTopKPrecipitation, requester: ActorRef): Unit = {
         val results = sc.cassandraTable[Double](keyspace, dailyTable) 
             .select("precipitation")
             .where("wsid = ? AND year = ?", e.wsid, e.year)
@@ -97,4 +98,7 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
             })
         results pipeTo requester
     }
+    
+    private def storeAnnual(e: AnnualPrecipitation): Unit =
+        sc.parallelize(Seq(e)).saveToCassandra(keyspace, yearlyTable)
 }
