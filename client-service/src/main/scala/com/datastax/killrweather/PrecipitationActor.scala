@@ -56,13 +56,15 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
      * during ingestion (using the hourly counter update). But any involvement 
      * of the year_cumulative_precip table is not apparent.
      */
-    // Dependent on population of daily_aggregate_precip via ingest-api.
-    private def cummulative(e: GetPrecipitation, requester: ActorRef): Unit =
+    // TODO: Consider how to use //.sum() TODO See DoubleRDDFunctions //import org.apache.spark.SparkContext._
+    // TODO: Dependent on population of daily_aggregate_precip via ingest-api.
+    private def cummulative(e: GetPrecipitation, requester: ActorRef): Unit = {
       sc.cassandraTable[Double](keyspace, dailyTable)
       .select("precipitation")
       .where("wsid = ? AND year = ?", e.wsid, e.year)
-      .collectAsync()
+      .collectAsync() // TODO: use Spark aggregate function
       .map(toYearlyCumulative(e.wsid, e.year, _)) pipeTo requester
+    }
       
     private def toYearlyCumulative(
         wsid: String, year: Int, aggregate: Seq[Double]
@@ -76,7 +78,7 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
             AnnualPrecipitation(wsid, year, sc.parallelize(aggregate).sum / 10)
         } else {
             log.info("PrecipitationActor.toCumulative NoDataAvailable")
-            NoDataAvailable(wsid, year, classOf[DailyTemperature])
+            NoDataAvailable(wsid, year, classOf[AnnualPrecipitation])
         }
 
     /** Returns the k highest temps for any station in the `year`. */
@@ -87,9 +89,11 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
             .where("wsid = ? AND year = ?", e.wsid, e.year)
             .collectAsync() // TODO - Try aggregate instead of collect
             .map(x => x match {
-                case Nil => None
-                case aggregate => Some(TopKPrecipitation(
-                    e.wsid, e.year, sc.parallelize(aggregate).top(e.k).toSeq))
+                case Nil => 
+                    NoDataAvailable(e.wsid, e.year, classOf[TopKPrecipitation])
+                case aggregate => 
+                    TopKPrecipitation(
+                        e.wsid, e.year, sc.parallelize(aggregate).top(e.k).toSeq)
             })
         results pipeTo requester
     }

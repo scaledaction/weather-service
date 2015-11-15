@@ -10,7 +10,7 @@ object ClientServiceApp extends App with HttpServerApp with HasCassandraConfig w
 
   val cassandraConfig = getCassandraConfig
   
-   val sparkConfig = getSparkConfig 
+  val sparkConfig = getSparkConfig 
 
   //TODO - Need to add ApplicationConfig and replace the hard-coded "sparkAppName" value with application.app-name
   val sc = SparkUtils.getActiveOrCreateSparkContext(cassandraConfig, sparkConfig.master, "WeatherService")
@@ -18,7 +18,8 @@ object ClientServiceApp extends App with HttpServerApp with HasCassandraConfig w
   implicit val system = ActorSystem("client-service")
 
   val service = system.actorOf(Props(new ClientService(sc)), "client-service")
-
+  startServer(service)
+  
   sys addShutdownHook {
     sc.stop
   }
