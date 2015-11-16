@@ -27,3 +27,5 @@ INSERT INTO  sky_condition_lookup (code, condition) VALUES (13, 'Dark scattered'
 INSERT INTO  sky_condition_lookup (code, condition) VALUES (14, 'Thin broken 15: Broken');
 INSERT INTO  sky_condition_lookup (code, condition) VALUES (16, 'Dark broken 17: Thin overcast 18: Overcast');
 INSERT INTO  sky_condition_lookup (code, condition) VALUES (19, 'Dark overcast');
+
+

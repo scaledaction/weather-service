@@ -24,96 +24,115 @@ import org.apache.spark.util.StatCounter
 
 /**
  * The TemperatureActor reads the daily temperature rollup data from Cassandra,
- * and for a given weather station, computes temperature statistics by month for a given year.
+ * and TODO: for a given weather station, computes temperature statistics by 
+ * month for a given year.
  */
 //class TemperatureActor(sc: SparkContext, settings: WeatherSettings)
 class TemperatureActor(sc: SparkContext, cassandraConfig: CassandraConfig)
-  extends AggregationActor with ActorLogging {
+    extends AggregationActor with ActorLogging {
 
-  import WeatherEvent._
-  import Weather._
+    import WeatherEvent._
+    import Weather._
 
-  val keyspace = cassandraConfig.keyspace
+    val keyspace = cassandraConfig.keyspace
 
-  //TODO - Add a WeatherServiceAppConfig and replace the hard-coded "dailytable" and "rawtable" values
-  //  cassandra {
-  //    table.raw = "raw_weather_data"
-  //    table.daily.temperature = "daily_aggregate_temperature"
-  //  }
-  //  import settings.{CassandraTableDailyTemp => dailytable}
-  val dailytable = "daily_aggregate_temperature"
-  //  import settings.{CassandraTableRaw => rawtable}
-  val rawtable = "raw_weather_data"
+    //TODO - Add a WeatherServiceAppConfig and replace the hard-coded "dailytable" and "rawtable" values
+    //  cassandra {
+    //    table.raw = "raw_weather_data"
+    //    table.daily.temperature = "daily_aggregate_temperature"
+    //  }
+    //  import settings.{CassandraTableDailyTemp => dailytable}
+    val dailyTable = "daily_aggregate_temperature"
+    //  import settings.{CassandraTableRaw => rawtable}
+    val rawTable = "raw_weather_data"
+    val monthlyTable = "monthly_aggregate_temperature"
 
-  def receive: Actor.Receive = {
-    //case e: GetDailyTemperature => daily(e.day, sender)
-    case e: GetDailyTemperature => daily(Day(e.wsid, e.year, e.month, e.day), sender)
-    case e: DailyTemperature => store(e)
-    case e: GetMonthlyHiLowTemperature => highLow(e, sender)
-  }
+    def receive: Actor.Receive = {
+        //case e: GetDailyTemperature => daily(e.day, sender)
+        case e: GetDailyTemperature => daily(Day(e.wsid, e.year, e.month, e.day), sender)
+        case e: GetMonthlyTemperature => highLow(e, sender)
+        case e: DailyTemperature => storeDaily(e)
+        case e: MonthlyTemperature => storeMonthly(e)
+    }
 
-  /**
-   * Computes and sends the daily aggregation to the `requester` actor.
-   * We aggregate this data on-demand versus in the stream.
-   *
-   * For the given day of the year, aggregates 0 - 23 temp values to statistics:
-   * high, low, mean, std, etc., and persists to Cassandra daily temperature table
-   * by weather station, automatically sorted by most recent - due to our cassandra schema -
-   * you don't need to do a sort in spark.
-   *
-   * Because the gov. data is not by interval (window/slide) but by specific date/time
-   * we look for historic data for hours 0-23 that may or may not already exist yet
-   * and create stats on does exist at the time of request.
-   */
-  def daily(day: Day, requester: ActorRef): Unit = {
-    println("daily()")
-    sc.cassandraTable[Double](keyspace, rawtable)
-      .select("temperature").where("wsid = ? AND year = ? AND month = ? AND day = ?",
-        day.wsid, day.year, day.month, day.day)
-      .collectAsync()
-      .map(toDaily(_, day)) pipeTo requester
-  }
+    private def daily(day: Day, requester: ActorRef): Unit =      
+        sc.cassandraTable[DailyTemperature](keyspace, dailyTable)
+        .where("wsid = ? AND year = ? AND month = ? AND day = ?",
+            day.wsid, day.year, day.month, day.day)
+        .collectAsync // TODO: write custom sum that checks for no data 
+        .map(seqDT => seqDT.headOption match {
+            case None => aggregateDaily(day, requester)
+            case Some(dailyTemperature) => requester ! dailyTemperature
+        })
+    
+    private def aggregateDaily(day: Day, requester: ActorRef): Unit = {      
+        sc.cassandraTable[Double](keyspace, rawTable)
+        .select("temperature").where(
+            "wsid = ? AND year = ? AND month = ? AND day = ?",
+            day.wsid, day.year, day.month, day.day
+        )
+        .collectAsync() // TODO: write custom sum that checks for no data
+        .map(toDaily(_, day)) pipeTo requester
+    }
 
-  /**
-   * Computes and sends the monthly aggregation to the `requester` actor.
-   */
-  def highLow(e: GetMonthlyHiLowTemperature, requester: ActorRef): Unit =
-    sc.cassandraTable[DailyTemperature](keyspace, dailytable)
-      .where("wsid = ? AND year = ? AND month = ?", e.wsid, e.year, e.month)
-      .collectAsync()
-      .map(toMonthly(_, e.wsid, e.year, e.month)) pipeTo requester
+    /**
+     * Checks for stored monthly aggregation and if not exists, passes
+     * to the aggregateMonth method.
+     */
+    private def highLow(
+        e: GetMonthlyTemperature, requester: ActorRef)
+    : Unit = {
+        sc.cassandraTable[MonthlyTemperature](keyspace, monthlyTable)
+        .where("wsid = ? AND year = ? AND month = ?",
+            e.wsid, e.year, e.month)
+        .collectAsync // TODO: write custom sum that checks for no data
+        .map(seqDT => seqDT.headOption match {
+            case None => aggregateMonth(e, requester)
+            case Some(monthlyTemperature) => requester ! monthlyTemperature
+        })
+    }
+        
+    private def aggregateMonth(
+        e: GetMonthlyTemperature, requester: ActorRef
+    ): Unit =
+        sc.cassandraTable[RawWeatherData](keyspace, rawTable)
+        .where("wsid = ? AND year = ? AND month = ?", e.wsid, e.year, e.month)
+        .collectAsync() // TODO: write custom sum that checks for no data
+        .map(toMonthly(_, e.wsid, e.year, e.month)) pipeTo requester
 
-  /**
-   * Stores the daily temperature aggregates asynchronously which are triggered
-   * by on-demand requests during the `forDay` function's `self ! data`
-   * to the daily temperature aggregation table.
-   */
-  private def store(e: DailyTemperature): Unit =
-    sc.parallelize(Seq(e)).saveToCassandra(keyspace, dailytable)
+    private def storeDaily(e: DailyTemperature): Unit =
+        sc.parallelize(Seq(e)).saveToCassandra(keyspace, dailyTable)
+        
+    private def storeMonthly(e: MonthlyTemperature): Unit =
+        sc.parallelize(Seq(e)).saveToCassandra(keyspace, monthlyTable)
 
-  /**
-   * Would only be handling handles 0-23 small items.
-   * We do 'self ! data' to async persist the aggregated data
-   * but still return it immediately to the requester, vs make client wait.
-   *
-   * @return If no hourly data available, returns [[NoDataAvailable]]
-   *         else [[DailyTemperature]] with mean, variance,stdev,hi,low stats.
-   */
-  private def toDaily(aggregate: Seq[Double], key: Day): WeatherAggregate =
-    if (aggregate.nonEmpty) {
-      val data = toDailyTemperature(key, StatCounter(aggregate))
-      self ! data
-      data
-    } else NoDataAvailable(key.wsid, key.year, classOf[DailyTemperature]) // not wanting to return an option to requester
+    private def toDaily(aggregate: Seq[Double], key: Day): WeatherAggregate =
+        if (aggregate.nonEmpty) {
+            val data = toDailyTemperature(key, StatCounter(aggregate))
+            if(aggregate.length >= 24) self ! data
+            data
+        } else {
+            log.info("TemperatureActor.toDaily NoDataAvailable")
+            NoDataAvailable(key.wsid, key.year, classOf[DailyTemperature]) 
+        }
 
-  private def toMonthly(aggregate: Seq[DailyTemperature], wsid: String, year: Int, month: Int): WeatherAggregate =
-    if (aggregate.nonEmpty)
-      MonthlyTemperature(wsid, year, month, aggregate.map(_.high).max, aggregate.map(_.low).min)
-    else
-      NoDataAvailable(wsid, year, classOf[MonthlyTemperature]) // not wanting to return an option to requester
+    private def toMonthly(
+        aggregate: Seq[RawWeatherData], wsid: String, year: Int, month: Int)
+        : WeatherAggregate = {
+        if (aggregate.nonEmpty) {
+            val data = MonthlyTemperature(wsid, year, month, 
+                aggregate.map(rwd => rwd.temperature).max, 
+                aggregate.map(rwd => rwd.temperature).min)
+            if(timestamp.getYear > year || timestamp.getMonthOfYear > month)
+                self ! data
+            data
+        } 
+        else NoDataAvailable(wsid, year, classOf[MonthlyTemperature])
+    }
+    
+    private def toDailyTemperature(key: Day, stats: StatCounter) =
+        DailyTemperature(key.wsid, key.year, key.month, key.day,
+            high = stats.max, low = stats.min, mean = stats.mean,
+            variance = stats.variance, stdev = stats.stdev)
 
-  private def toDailyTemperature(key: Day, stats: StatCounter): DailyTemperature =
-    DailyTemperature(key.wsid, key.year, key.month, key.day,
-      high = stats.max, low = stats.min, mean = stats.mean,
-      variance = stats.variance, stdev = stats.stdev)
 }
