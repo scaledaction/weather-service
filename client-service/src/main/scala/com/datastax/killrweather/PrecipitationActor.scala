@@ -80,8 +80,18 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
                 wsid, year, sc.parallelize(aggregate).sum / 10) /* TODO: daily_aggregate_precip precipitation is a Cassandra counter which only holds Int, so we multiply and divide by 10. Values resolve to 1 decimal place. We are note attemptingto batch or store in year_cumulative_precip table as the lambda architecture pattern is not yet clear. */
             if(timestamp.getYear > year) self ! data   
             data
-        } 
+        }
         else NoDataAvailable(wsid, year, classOf[AnnualPrecipitation])
+        /* TODO RW: Implement calculation attempt of AP from raw data?
+         * First build daily_aggregate_precip for year if availabvle
+         * (perhaps only partially?)? Or just build only the
+         * year_aggregate_precip? What are the possible error scenarios?
+         * To what degree should error scenarios be detected and 
+         * accounted for (i.e. recovered)?
+         * I think it is too much responsibility for each of these query
+         * methods to manage in terms of rebuilding aggregation views.
+         * There should be batch processes for such recovery or filling
+         * in missing data.*/
 
     /** Returns the k highest temps for any station in the `year`. */
     private def yearlyTopK(
