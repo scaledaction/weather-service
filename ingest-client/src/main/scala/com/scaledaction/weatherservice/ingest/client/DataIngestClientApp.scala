@@ -42,43 +42,6 @@ object DataIngestClientApp extends App with ClientHelper {
             }
     }
     
-    /*Try(config.getString("weatherservice.data.load.path")) match {
-        case Success(filePath) =>
-            Try(config.getString("weatherservice.data.target.url")) match {
-                case Success(targetUrl) =>
-                    csvFileToJsonIngest(filePath, targetUrl)
-                case Failure(f) =>
-                    log.error("Failed to get target url: " + f)
-                    shutdown()
-            }
-        case Failure(f) => 
-            log.error("Failed to get data file path: " + f)
-            shutdown()
-    }*/
-    
-    /*private def csvFileToJsonIngest(filePath: String, targetUrl: String) = {
-        log.info("csvFileToJsonIngest, filePath: " + filePath + 
-                 " targetUrl: " + targetUrl)
-                         
-        Try(FileSource(new JFile(filePath))) match {
-            case Success(fs) => 
-                for(record <- fs.data){
-                    val splitValues = Try(record.split(","))
-                    splitValues match {
-                        case Success(values) => postJson(values, targetUrl)
-                        case Failure(f) => 
-                            log.info("csvFileToJsonIngest split error: " + f)
-                    }
-                }
-            case Failure(f) => 
-                log.error("Failed to open file: " + f)
-                shutdown()
-        }
-        Thread.sleep(120000) // TODO: This is a one-time finite data load operation bound to starting the app and should close for convenience.
-        log.info("Ingestion operation completed, calling shutdown.")
-        shutdown() // We are through.
-    }*/
-
     private def postJson(attr: Array[String], targetUrl: String) {
         val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
         

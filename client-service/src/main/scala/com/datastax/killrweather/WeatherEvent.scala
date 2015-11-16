@@ -36,9 +36,12 @@ object WeatherEvent extends DefaultJsonProtocol {
 
   sealed trait WeatherRequest extends WeatherEvent
   trait WeatherStationRequest extends WeatherRequest
-  case class GetWeatherStation(sid: String) extends WeatherStationRequest
-  case class GetCurrentWeather(wsid: String, timestamp: Option[DateTime]= None) extends WeatherStationRequest
-
+  case class GetWeatherStation(wsid: String) extends WeatherStationRequest
+  case class GetCurrentWeather(wsid: String) extends WeatherStationRequest
+  
+  implicit val GetWeatherStationFormat = jsonFormat1(GetWeatherStation)
+  implicit val GetCurrentWeatherFormat = jsonFormat1(GetCurrentWeather)
+  
   trait PrecipitationRequest extends WeatherRequest
   case class GetPrecipitation(wsid: String, year: Int) extends PrecipitationRequest
   case class GetTopKPrecipitation(wsid: String, year: Int, k: Int) extends PrecipitationRequest
@@ -51,7 +54,8 @@ object WeatherEvent extends DefaultJsonProtocol {
   //case class GetDailyTemperature(day: Day) extends TemperatureRequest
   case class GetDailyTemperature(wsid: String, year: Int, month: Int, day: Int) extends TemperatureRequest  
   case class GetMonthlyTemperature(wsid: String, year: Int, month: Int) extends TemperatureRequest
-  implicit val DayFormat = jsonFormat4(Day)
+  
+  //implicit val DayFormat = jsonFormat4(Day)
   implicit val GetDailyTemperatureFormat = jsonFormat4(GetDailyTemperature)
   implicit val GetMonthlyTemperatureFormat = jsonFormat3(GetMonthlyTemperature)
 
@@ -63,6 +67,7 @@ object WeatherEvent extends DefaultJsonProtocol {
    * Quick access lookup table for sky_condition. Useful for potential analytics.
    * See http://en.wikipedia.org/wiki/Okta
    */
+  // TODO: Not implemented
   case class GetSkyConditionLookup(code: Int) extends WeatherRequest
 
 }

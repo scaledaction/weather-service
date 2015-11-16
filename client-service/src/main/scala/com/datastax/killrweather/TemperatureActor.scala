@@ -123,7 +123,8 @@ class TemperatureActor(sc: SparkContext, cassandraConfig: CassandraConfig)
             val data = MonthlyTemperature(wsid, year, month, 
                 aggregate.map(rwd => rwd.temperature).max, 
                 aggregate.map(rwd => rwd.temperature).min)
-            if(aggregate.length >= monthLength(month)) self ! data
+            if(timestamp.getYear > year || timestamp.getMonthOfYear > month)
+                self ! data
             data
         } 
         else NoDataAvailable(wsid, year, classOf[MonthlyTemperature])

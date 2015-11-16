@@ -19,21 +19,6 @@ import org.joda.time.DateTime
 import spray.json.DefaultJsonProtocol
 
 object Weather extends DefaultJsonProtocol {
-    
-  val monthLength = scala.collection.immutable.Map[Int, Int] (
-      1 -> 31,
-      2 -> 28,
-      3 -> 31,
-      4 -> 30,
-      5 -> 31,
-      6 -> 30,
-      7 -> 31,
-      8 -> 31,
-      9 -> 30,
-      10 -> 31,
-      11 -> 30,
-      12 -> 31
-  )
 
   /** Base marker trait. */
   @SerialVersionUID(1L)
@@ -56,6 +41,8 @@ object Weather extends DefaultJsonProtocol {
     lat: Double,
     long: Double,
     elevation: Double) extends WeatherModel
+    
+  implicit val WeatherStationFormat = jsonFormat7(WeatherStation)
 
   /**
    * @param wsid Composite of Air Force Datsav3 station number and NCDC WBAN number
@@ -90,7 +77,7 @@ object Weather extends DefaultJsonProtocol {
     sixHourPrecip: Double
   ) extends WeatherModel
 
-  // RW: Using the default json marshalling.
+  // Using the default json marshalling.
   implicit val RawWeatherFormat = jsonFormat14(RawWeatherData)
 
   trait WeatherAggregate extends WeatherModel with Serializable {
@@ -100,19 +87,19 @@ object Weather extends DefaultJsonProtocol {
 
   case class Day(wsid: String, year: Int, month: Int, day: Int) extends WeatherAggregate
 
-//  object Day {
-//    def apply(d: RawWeatherData): Day =
-//      Day(d.wsid, d.year, d.month, d.day)
-//
-//    def apply(wsid: String, utcTimestamp: DateTime): Day =
-//      Day(wsid, utcTimestamp.getYear, utcTimestamp.getMonthOfYear, utcTimestamp.getDayOfMonth)
-//
-//    /** Tech debt */
-//    def apply(line: String): Day = {
-//      val array = line.split(",")
-//      Day(wsid = array(0), year = array(1).toInt, month = array(2).toInt, day = array(3).toInt)
-//    }
-//  }
+    /*object Day {
+      def apply(d: RawWeatherData): Day =
+        Day(d.wsid, d.year, d.month, d.day)
+  
+      def apply(wsid: String, utcTimestamp: DateTime): Day =
+        Day(wsid, utcTimestamp.getYear, utcTimestamp.getMonthOfYear, utcTimestamp.getDayOfMonth)
+  
+      /** Tech debt */
+      def apply(line: String): Day = {
+        val array = line.split(",")
+        Day(wsid = array(0), year = array(1).toInt, month = array(2).toInt, day = array(3).toInt)
+      }
+    }*/
 
   case class NoDataAvailable(wsid: String, year: Int, query: Class[_ <: WeatherAggregate]) extends WeatherAggregate
 

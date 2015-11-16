@@ -29,11 +29,10 @@ class ClientService(sc: SparkContext) extends HttpServiceActor with HasCassandra
 
     def receive = runRoute(route)
 
-    //TODO - Route me
-    //def route = precipitationRoute ~ temperatureRoute ~ weatherStationRoute
-    def route = precipitationRoute ~ temperatureRoute
+    def route = precipitationRoute ~ temperatureRoute ~ weatherStationRoute
 
-    // Note: Must order per decending number of fields
+    // Note: Entities must be ordered per decending number of fields.
+    
     val precipitationRoute = pathPrefix("weather" / "precipitation") {
         get {
             entity(as[GetTopKPrecipitation]) { e =>
@@ -76,6 +75,32 @@ class ClientService(sc: SparkContext) extends HttpServiceActor with HasCassandra
             }
         }
     }
+    
+    val weatherStationRoute = 
+        get {
+            pathPrefix("weather" / "station") {
+                entity(as[GetWeatherStation]) { e =>
+                    onSuccess(getWeatherStation(e)) {
+                        case nda: NoDataAvailable => complete(NotFound)
+                        case ws: WeatherStation => complete(OK, ws)
+                    }
+                }
+            } ~
+            pathPrefix("weather" / "current") {
+                entity(as[GetCurrentWeather]) { e =>
+                    onSuccess(getCurrentWeather(e)) {
+                        case nda: NoDataAvailable => complete(NotFound)
+                        case rwd: RawWeatherData => complete(OK, rwd) 
+                    }
+                }
+            }
+        }
+                
+    def getWeatherStation(e: GetWeatherStation) =
+        weatherStation.ask(e).mapTo[WeatherModel]
+    
+    def getCurrentWeather(e: GetCurrentWeather) =
+        weatherStation.ask(e).mapTo[WeatherModel]
     
     def getPrecipitation(e: GetPrecipitation) =
         precipitation.ask(e).mapTo[WeatherAggregate]
