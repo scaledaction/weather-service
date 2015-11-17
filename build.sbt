@@ -35,6 +35,7 @@ lazy val ingest_backend = (project in file("ingest-backend"))
                        .settings(libraryDependencies ++= ingest_backend_deps)
 
 val akkaVersion = "2.3.11"
+val cassandraDriverVersion = "2.1.5"
 val sparkVersion = "1.4.1"
 val sparkCassandraConnectorVersion = "1.4.0-M3"
 val kafkaVersion = "0.8.2.1"
@@ -49,6 +50,8 @@ lazy val coreDeps = Seq(
   "io.spray"               %% "spray-routing"         % sprayVersion,
   "io.spray"               %% "spray-json"            % "1.3.2",
   "com.datastax.spark"     % "spark-cassandra-connector_2.10" % sparkCassandraConnectorVersion,
+//  "com.datastax.cassandra" % "cassandra-driver-core"  % cassandraDriverVersion,
+  "com.datastax.spark"     %% "spark-cassandra-connector-embedded" % sparkCassandraConnectorVersion,  
   "org.apache.spark"       %% "spark-sql"             % sparkVersion, //% "provided",
   "org.apache.spark"       %% "spark-streaming"       % sparkVersion, //% "provided",
   "org.specs2"             %% "specs2"                % "2.2.2"        % "test",
