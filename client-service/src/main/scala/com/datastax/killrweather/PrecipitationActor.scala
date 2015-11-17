@@ -65,7 +65,7 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
     private def aggregateYearly(
         e: GetPrecipitation, requester: ActorRef
     ): Unit = {
-        sc.cassandraTable[Double](keyspace, dailyTable)
+        sc.cassandraTable[Double](keyspace, dailyTable) // TODO: Needs to read from raw data since this is a derivation it cannot be assumed extant without a check.
         .select("precipitation")
         .where("wsid = ? AND year = ?", e.wsid, e.year)
         .collectAsync() // TODO: use Spark aggregate function
@@ -83,7 +83,7 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
         }
         else NoDataAvailable(wsid, year, classOf[AnnualPrecipitation])
         /* TODO RW: Implement calculation attempt of AP from raw data?
-         * First build daily_aggregate_precip for year if availabvle
+         * First build daily_aggregate_precip for year if available
          * (perhaps only partially?)? Or just build only the
          * year_aggregate_precip? What are the possible error scenarios?
          * To what degree should error scenarios be detected and 

@@ -109,7 +109,8 @@ class TemperatureActor(sc: SparkContext, cassandraConfig: CassandraConfig)
     private def toDaily(aggregate: Seq[Double], key: Day): WeatherAggregate =
         if (aggregate.nonEmpty) {
             val data = toDailyTemperature(key, StatCounter(aggregate))
-            if(aggregate.length >= 24) self ! data
+            if(timestamp.getYear > key.year 
+               || timestamp.getMonthOfYear > key.month) self ! data
             data
         } else {
             log.info("TemperatureActor.toDaily NoDataAvailable")
