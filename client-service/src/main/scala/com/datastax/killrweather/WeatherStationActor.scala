@@ -58,15 +58,16 @@ class WeatherStationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
             timestamp.getDayOfMonth, 
             timestamp.getHourOfDay
         )
-        val result = sc.cassandraTable[RawWeatherData](keyspace, rawtable)
+        sc.cassandraTable[RawWeatherData](keyspace, rawtable)
         .where("wsid = ? AND year = ? AND month = ? AND day = ?",
              wsid, day.year, day.month, day.day)
         .collectAsync()
         .map(seqRWD => seqRWD.headOption match {
-            case None => NoDataAvailable(wsid, day.year, classOf[WeatherAggregate])
-            case Some(rwd) => rwd
+            case None => 
+                requester ! NoDataAvailable(wsid, day.year, classOf[WeatherAggregate])
+            case Some(rwd) =>
+                requester ! rwd
         })
-        requester ! result
     }
 
     /**
@@ -75,14 +76,14 @@ class WeatherStationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
      * query invocation. You would probably receive about partitions_number * limit results.
      */
     def weatherStation(wsid: String, requester: ActorRef): Unit = {
-        val result = sc.cassandraTable[Weather.WeatherStation](keyspace, weatherstations)
+        sc.cassandraTable[Weather.WeatherStation](keyspace, weatherstations)
         .where("id = ?", wsid)
         .collectAsync
         .map(seqWS => seqWS.headOption match {
-            case None => NoDataAvailable(wsid, timestamp.getYear, classOf[WeatherAggregate])
-            case Some(ws) => ws
+            case None =>
+                requester ! NoDataAvailable(wsid, timestamp.getYear, classOf[WeatherAggregate])
+            case Some(ws) => requester ! ws
         })
-        requester ! result
     }
 }
 
