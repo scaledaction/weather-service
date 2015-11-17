@@ -41,6 +41,7 @@ val sparkCassandraConnectorVersion = "1.4.0-M3"
 val kafkaVersion = "0.8.2.1"
 val scalaTestVersion = "2.2.4"
 val sprayVersion = "1.3.3"
+val json4sVersion = "3.3.0"
 
 lazy val coreDeps = Seq(
   "com.typesafe.akka"      %% "akka-actor"            % akkaVersion,
@@ -122,6 +123,9 @@ lazy val ingest_backend_deps = Seq(
   "org.apache.spark"  %% "spark-streaming"       % sparkVersion, //% "provided",
   "org.apache.spark"  %% "spark-streaming-kafka" % sparkVersion, //% "provided",
   "org.apache.spark"  %% "spark-mllib"           % sparkVersion, //% "provided",
+  "org.json4s"        %% "json4s-core"           % json4sVersion,
+  "org.json4s"        %% "json4s-jackson"        % json4sVersion,
+  "org.json4s"        %% "json4s-native"         % json4sVersion,
   "io.spray"          %% "spray-client"          % sprayVersion,
   "io.spray"          %% "spray-json"            % "1.3.2",
   "com.databricks"    %% "spark-csv"             % "1.2.0"

@@ -8,6 +8,8 @@ import com.datastax.spark.connector.streaming._
 import kafka.serializer.StringDecoder
 import org.apache.spark.Logging
 import org.apache.spark.streaming.kafka.KafkaUtils
+import org.json4s.{DefaultFormats, Formats}
+import org.json4s.native.JsonParser
 
 // github/mesosphere/iot-demo/streaming/src/main/scala/com/bythebay/pipeline/spark/streaming/StreamingRatings.scala
 // github/scaledaction/killrweather/killrweather-app/src/main/scala/com/datastax/killrweather/KafkaStreamingActor.scala
@@ -30,11 +32,12 @@ object DataIngestBackendApp extends App with HasCassandraConfig with HasKafkaCon
   //val kafkaStream = KafkaUtils.createStream[String, String, StringDecoder, StringDecoder](
   //  ssc, kafkaParams, Map(KafkaTopicRaw -> 1), StorageLevel.DISK_ONLY_2)
 
+  implicit val jsonFormats: Formats = DefaultFormats
+
   //From IoT-Demo
   val kafkaStream = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](
     ssc, kafkaConfig.kafkaParams, kafkaConfig.topics)
-    .map(_._2.split(","))
-    .map(RawWeatherDataFactory(_))
+    .map { case (_, v) => JsonParser.parse(v).extract[RawWeatherData] }
 
   /** Saves the raw data to Cassandra - raw table. */
   kafkaStream.saveToCassandra(cassandraConfig.keyspace, CassandraTableRaw)
