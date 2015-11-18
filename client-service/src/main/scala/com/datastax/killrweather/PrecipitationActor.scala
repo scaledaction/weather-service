@@ -106,7 +106,10 @@ class PrecipitationActor(sc: SparkContext, cassandraConfig: CassandraConfig)
                     NoDataAvailable(e.wsid, e.year, classOf[TopKPrecipitation])
                 case seqPrecip => 
                     TopKPrecipitation(
-                        e.wsid, e.year, sc.parallelize(seqPrecip).top(e.k).toSeq)
+                        e.wsid, e.year, 
+                        sc.parallelize(seqPrecip).top(e.k).toSeq.map(p => p/10)
+                        // precip stored as Int*10 on ingest, Int/10 on query.
+                    )
             })
         results pipeTo requester
     }

@@ -58,8 +58,18 @@ object DataIngestBackendApp extends App with HasCassandraConfig with HasKafkaCon
    * This new functionality in Cassandra 2.1.1 is going to make time series work even faster:
    * https://issues.apache.org/jira/browse/CASSANDRA-6602
    */
+  /* TODO: Cassandra counter field is not suited to act as aggregator 
+   * for Doubles. Having to multiply by 10 on write and subsequently 
+   * divide by 10 when read to achieve double value.
+   */
+   // TODO: Seems function will not serialize unless it's inline.
+   // val precip = multBy10(weather.oneHourPrecip)
   kafkaStream.map { weather =>
-    (weather.wsid, weather.year, weather.month, weather.day, weather.oneHourPrecip)
+    (
+      weather.wsid, weather.year, weather.month, weather.day, 
+      (if(weather.oneHourPrecip < 0 ) 0 
+      else (weather.oneHourPrecip * 10).toInt)
+    )
   }.saveToCassandra(cassandraConfig.keyspace, CassandraTableDailyPrecip)
 
   kafkaStream.print // for demo purposes only  
