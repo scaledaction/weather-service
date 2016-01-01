@@ -3,18 +3,18 @@ val globalSettings = Seq(
   scalaVersion := "2.10.5"
 )
 
-val modulePrefix = "weatherservice"
+val modulePrefix = "weather"
 
 lazy val core = (project in file("core"))
   .settings(name := s"${modulePrefix}-core")
   .settings(globalSettings:_*)
   .settings(libraryDependencies ++= coreDeps)
 
-lazy val client_service = (project in file("client-service"))
+lazy val query_service = (project in file("query-service"))
   .dependsOn(core)
-  .settings(name := s"${modulePrefix}-client-service")
+  .settings(name := s"${modulePrefix}-query-service")
   .settings(globalSettings:_*)
-  .settings(libraryDependencies ++= client_service_deps)
+  .settings(libraryDependencies ++= query_service_deps)
 
 lazy val ingest_api = (project in file("ingest-api"))
   .dependsOn(core)
@@ -64,7 +64,7 @@ lazy val coreDeps = Seq(
   //  exclude("com.sun.jmx", "jmxri")
 )
 
-lazy val client_service_deps = Seq(
+lazy val query_service_deps = Seq(
   "com.typesafe.akka"      %% "akka-actor"            % akkaVersion,
   "com.typesafe.akka"      %% "akka-slf4j"            % akkaVersion,
   "io.spray"               %% "spray-can"             % sprayVersion,
