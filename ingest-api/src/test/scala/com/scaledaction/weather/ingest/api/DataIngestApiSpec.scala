@@ -1,4 +1,4 @@
-package com.scaledaction.weatherservice.ingest.api
+package com.scaledaction.weather.ingest.api
 
 import akka.actor.{ Actor, Props }
 import org.specs2.mutable.Specification

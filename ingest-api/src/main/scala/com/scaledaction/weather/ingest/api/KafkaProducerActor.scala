@@ -1,4 +1,4 @@
-package com.scaledaction.weatherservice.ingest.api
+package com.scaledaction.weather.ingest.api
 
 import akka.event.Logging
 import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerRecord, Callback, RecordMetadata }

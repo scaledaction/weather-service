@@ -1,4 +1,4 @@
-package com.scaledaction.weatherservice.ingest.api
+package com.scaledaction.weather.ingest.api
 
 import akka.actor.{ ActorSystem, Props }
 import com.scaledaction.core.akka.HttpServerApp

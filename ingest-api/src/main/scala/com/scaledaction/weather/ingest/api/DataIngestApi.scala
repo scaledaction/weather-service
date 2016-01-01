@@ -1,4 +1,4 @@
-package com.scaledaction.weatherservice.ingest.api
+package com.scaledaction.weather.ingest.api
 
 import spray.routing.Directives
 import spray.http.MediaTypes._
