@@ -1,4 +1,4 @@
-package com.scaledaction.weatherservice.ingest.backend
+package com.scaledaction.weather.ingest.backend
 
 import com.scaledaction.core.cassandra.HasCassandraConfig
 import com.scaledaction.core.kafka.HasKafkaConfig
