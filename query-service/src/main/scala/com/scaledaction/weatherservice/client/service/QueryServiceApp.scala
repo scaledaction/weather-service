@@ -6,7 +6,7 @@ import com.scaledaction.core.cassandra.HasCassandraConfig
 import com.scaledaction.core.spark.HasSparkConfig
 import com.scaledaction.core.spark.SparkUtils
 
-object ClientServiceApp extends App with HttpServerApp with HasCassandraConfig with HasSparkConfig {
+object QueryServiceApp extends App with HttpServerApp with HasCassandraConfig with HasSparkConfig {
 
   val cassandraConfig = getCassandraConfig
   
@@ -15,9 +15,9 @@ object ClientServiceApp extends App with HttpServerApp with HasCassandraConfig w
   //TODO - Need to add ApplicationConfig and replace the hard-coded "sparkAppName" value with application.app-name
   val sc = SparkUtils.getActiveOrCreateSparkContext(cassandraConfig, sparkConfig.master, "WeatherService")
 
-  implicit val system = ActorSystem("client-service")
+  implicit val system = ActorSystem("query-service")
 
-  val service = system.actorOf(Props(new ClientService(sc)), "client-service")
+  val service = system.actorOf(Props(new QueryService(sc)), "query-service")
   startServer(service)
   
   sys addShutdownHook {

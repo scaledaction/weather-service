@@ -16,7 +16,7 @@ import com.datastax.killrweather.Weather._
 import com.datastax.killrweather.{ PrecipitationActor, TemperatureActor, WeatherStationActor }
 import com.scaledaction.core.cassandra.{ CassandraConfig, HasCassandraConfig }
 
-class ClientService(sc: SparkContext) extends HttpServiceActor with HasCassandraConfig {
+class QueryService(sc: SparkContext) extends HttpServiceActor with HasCassandraConfig {
 
     implicit val timeout = stringToDuration("20 s")
     implicit def executionContext = context.dispatcher
