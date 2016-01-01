@@ -1,4 +1,4 @@
-package com.scaledaction.weatherservice.ingest.client
+package com.scaledaction.weather.ingest.client
 
 import java.io.{BufferedInputStream, FileInputStream, File => JFile}
 import java.util.zip.GZIPInputStream

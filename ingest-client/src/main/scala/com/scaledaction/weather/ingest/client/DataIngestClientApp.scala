@@ -1,4 +1,4 @@
-package com.scaledaction.weatherservice.ingest.client
+package com.scaledaction.weather.ingest.client
 
 import akka.actor.ActorSystem
 import akka.pattern.ask
@@ -85,8 +85,3 @@ object DataIngestClientApp extends App with ClientHelper {
         system.shutdown()
     }
 }
-
-
-
-
-
