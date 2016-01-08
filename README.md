@@ -10,7 +10,7 @@ A Reactive Application that ingests, processes, reformats and stores automated w
 ScaledAction pipeline
 ![ScaledAction pipeline](https://github.com/scaledaction/sentiment-analysis/blob/images/images/WSPipeline1a.png)
 
-# 1 Deploymenet via Mesosphere DCOS
+# 1 Deployment via Mesosphere DCOS
 
 # 1.1 Create a DCOS cluster and install the CLI
 
