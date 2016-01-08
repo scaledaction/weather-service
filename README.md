@@ -10,7 +10,7 @@ A Reactive Application that ingests, processes, reformats and stores automated w
 ScaledAction pipeline
 ![ScaledAction pipeline](https://github.com/scaledaction/sentiment-analysis/blob/images/images/WSPipeline1a.png)
 
-# 1 Deploymenet via DCOS
+# 1 Deploymenet via Mesosphere DCOS
 
 # 1.1 Create a DCOS cluster and install the CLI
 
@@ -43,15 +43,7 @@ dcos package install kafka
 dcos kafka broker add 0..2
 dcos kafka broker update 0..2 --options num.io.threads=16,num.partitions=6,default.replication.factor=2
 dcos kafka broker start 0..2
-# Show Kafka cluster status
-dcos kafka broker list
 ```
-
-# 1.3 Adjust the configuration
-
-* Copy `etc/config_template.yml` to `etc/config.yml`
-* Create a Twitter account with API keys ([see here for details](https://dev.twitter.com/oauth/overview/application-owner-access-tokens))
-* Insert your credentials into the configuration file
 
 #2 Execute SQL queries
 
